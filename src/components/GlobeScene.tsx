@@ -1,9 +1,12 @@
 "use client";
 
-import { useRef, Suspense } from "react";
+import { useMemo, useRef, Suspense } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Line, OrbitControls, Stars, Sphere } from "@react-three/drei";
+import { Html, Line, OrbitControls, Stars, Sphere } from "@react-three/drei";
 import * as THREE from "three";
+import { mesh } from "topojson-client";
+import type { GeometryCollection, Topology } from "topojson-specification";
+import countries110m from "world-atlas/countries-110m.json";
 import { GlobalEvent } from "@/types";
 import { mockShippingRoutes } from "@/data/mockGlobalEvents";
 
@@ -13,6 +16,30 @@ const RISK_COLORS: Record<string, string> = {
   medium: "#ffd60a",
   low: "#0a84ff",
   monitoring: "#00f0ff",
+};
+
+interface BoundaryMesh {
+  type: "MultiLineString";
+  coordinates: number[][][];
+}
+
+const COUNTRY_LABELS = [
+  { name: "Sri Lanka", lat: 7.9, lng: 80.7 },
+  { name: "India", lat: 22.8, lng: 79.2 },
+  { name: "China", lat: 35.8, lng: 104.1 },
+  { name: "Saudi Arabia", lat: 24.1, lng: 45.1 },
+  { name: "Yemen", lat: 15.6, lng: 47.5 },
+  { name: "Ukraine", lat: 49.0, lng: 31.3 },
+  { name: "Netherlands", lat: 52.1, lng: 5.3 },
+  { name: "Panama", lat: 8.5, lng: -80.0 },
+  { name: "Singapore", lat: 1.3, lng: 103.8 },
+  { name: "UAE", lat: 24.4, lng: 54.3 },
+];
+
+const ROUTE_COLORS: Record<string, string> = {
+  blocked: "#ff2d55",
+  delayed: "#ff9500",
+  active: "#00f0ff",
 };
 
 function latLngToVec3(lat: number, lng: number, radius: number): THREE.Vector3 {
@@ -25,9 +52,84 @@ function latLngToVec3(lat: number, lng: number, radius: number): THREE.Vector3 {
   );
 }
 
+function CountryBorders() {
+  const borderLines = useMemo(() => {
+    const topology = countries110m as unknown as Topology<{
+      countries: GeometryCollection;
+    }>;
+    const borders = mesh(
+      topology,
+      topology.objects.countries,
+      (a, b) => a !== b
+    ) as unknown as BoundaryMesh;
+
+    return borders.coordinates
+      .map((lineString) =>
+        lineString.map(([lng, lat]) => latLngToVec3(lat, lng, 2.018))
+      )
+      .filter((points) => points.length > 1);
+  }, []);
+
+  return (
+    <group>
+      {borderLines.map((points, i) => (
+        <Line
+          key={`country-${i}`}
+          points={points}
+          color="#7df9ff"
+          transparent
+          opacity={0.42}
+          lineWidth={0.65}
+        />
+      ))}
+    </group>
+  );
+}
+
+function GlobeRings() {
+  const equator = useMemo(
+    () => Array.from({ length: 145 }, (_, i) => latLngToVec3(0, -180 + i * 2.5, 2.035)),
+    []
+  );
+  const tropicNorth = useMemo(
+    () => Array.from({ length: 145 }, (_, i) => latLngToVec3(23.5, -180 + i * 2.5, 2.025)),
+    []
+  );
+  const tropicSouth = useMemo(
+    () => Array.from({ length: 145 }, (_, i) => latLngToVec3(-23.5, -180 + i * 2.5, 2.025)),
+    []
+  );
+
+  return (
+    <>
+      <Line points={equator} color="#00f0ff" transparent opacity={0.32} lineWidth={1} />
+      <Line points={tropicNorth} color="#0a84ff" transparent opacity={0.18} lineWidth={0.5} />
+      <Line points={tropicSouth} color="#0a84ff" transparent opacity={0.18} lineWidth={0.5} />
+    </>
+  );
+}
+
+function RoutePulse({ curve, color, offset }: { curve: THREE.QuadraticBezierCurve3; color: string; offset: number }) {
+  const ref = useRef<THREE.Mesh>(null);
+
+  useFrame(({ clock }) => {
+    const t = (clock.elapsedTime * 0.16 + offset) % 1;
+    ref.current?.position.copy(curve.getPoint(t));
+  });
+
+  return (
+    <mesh ref={ref}>
+      <sphereGeometry args={[0.025, 10, 10]} />
+      <meshBasicMaterial color={color} />
+      <pointLight color={color} intensity={0.35} distance={0.55} />
+    </mesh>
+  );
+}
+
 function Globe({ events }: { events: GlobalEvent[] }) {
-  const globeRef = useRef<THREE.Mesh>(null);
+  const globeRef = useRef<THREE.Group>(null);
   const rippleRefs = useRef<THREE.Mesh[]>([]);
+  const routes = mockShippingRoutes;
 
   useFrame((_, delta) => {
     if (globeRef.current) globeRef.current.rotation.y += delta * 0.08;
@@ -41,24 +143,41 @@ function Globe({ events }: { events: GlobalEvent[] }) {
     });
   });
 
-  const routes = mockShippingRoutes;
+  const routeCurves = useMemo(
+    () =>
+      routes.map((route) => {
+        const from = latLngToVec3(route.from.lat, route.from.lng, 2.06);
+        const to = latLngToVec3(route.to.lat, route.to.lng, 2.06);
+        const mid = from.clone().add(to).multiplyScalar(0.5);
+        mid.normalize().multiplyScalar(2.82);
+        return {
+          route,
+          curve: new THREE.QuadraticBezierCurve3(from, mid, to),
+          color: ROUTE_COLORS[route.status] ?? "#00f0ff",
+        };
+      }),
+    [routes]
+  );
 
   return (
-    <group>
-      <Sphere ref={globeRef} args={[2, 64, 64]}>
+    <group ref={globeRef}>
+      <Sphere args={[2, 96, 96]}>
         <meshPhongMaterial
-          color="#0a1628"
+          color="#071426"
           emissive="#001a33"
-          emissiveIntensity={0.3}
+          emissiveIntensity={0.38}
           wireframe={false}
           transparent
-          opacity={0.9}
+          opacity={0.94}
         />
       </Sphere>
 
+      <CountryBorders />
+      <GlobeRings />
+
       {/* Wireframe overlay */}
       <Sphere args={[2.01, 32, 32]}>
-        <meshBasicMaterial color="#00f0ff" wireframe transparent opacity={0.08} />
+        <meshBasicMaterial color="#00f0ff" wireframe transparent opacity={0.045} />
       </Sphere>
 
       {/* Atmosphere glow */}
@@ -83,28 +202,43 @@ function Globe({ events }: { events: GlobalEvent[] }) {
               <meshBasicMaterial color={color} transparent opacity={0.3} />
             </mesh>
             <pointLight color={color} intensity={0.5} distance={0.5} />
+            <Html center distanceFactor={8} className="pointer-events-none">
+              <div className="rounded border border-cyan-400/30 bg-[#030712]/80 px-1.5 py-0.5 text-[8px] font-mono uppercase tracking-wider text-cyan-100 shadow-[0_0_12px_rgba(0,240,255,0.18)]">
+                {evt.country}
+              </div>
+            </Html>
           </group>
         );
       })}
 
+      {/* Country and port labels */}
+      {COUNTRY_LABELS.map((label) => (
+        <Html key={label.name} position={latLngToVec3(label.lat, label.lng, 2.08)} center distanceFactor={9} className="pointer-events-none">
+          <div className="whitespace-nowrap text-[8px] font-mono uppercase tracking-wider text-cyan-300/75">
+            {label.name}
+          </div>
+        </Html>
+      ))}
+
       {/* Shipping routes */}
-      {routes.map((route) => {
-        const from = latLngToVec3(route.from.lat, route.from.lng, 2.05);
-        const to = latLngToVec3(route.to.lat, route.to.lng, 2.05);
-        const mid = from.clone().add(to).multiplyScalar(0.5);
-        mid.normalize().multiplyScalar(2.8);
-        const curve = new THREE.QuadraticBezierCurve3(from, mid, to);
+      {routeCurves.map(({ route, curve, color }, i) => {
         const points = curve.getPoints(50);
-        const color = route.status === "blocked" ? "#ff2d55" : route.status === "delayed" ? "#ff9500" : "#00f0ff";
         return (
-          <Line
-            key={route.id}
-            points={points}
-            color={color}
-            transparent
-            opacity={0.5}
-            lineWidth={1}
-          />
+          <group key={route.id}>
+            <Line
+              points={points}
+              color={color}
+              transparent
+              opacity={route.status === "active" ? 0.42 : 0.68}
+              lineWidth={route.status === "blocked" ? 1.7 : 1.1}
+            />
+            <RoutePulse curve={curve} color={color} offset={i * 0.23} />
+            <Html position={points[Math.floor(points.length / 2)]} center distanceFactor={8} className="pointer-events-none">
+              <div className="rounded bg-black/50 px-1.5 py-0.5 text-[8px] font-mono uppercase tracking-wider text-cyan-200/80">
+                {route.status} {route.delayHours ? `${route.delayHours}h` : ""}
+              </div>
+            </Html>
+          </group>
         );
       })}
     </group>
