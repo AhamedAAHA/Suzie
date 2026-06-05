@@ -16,6 +16,31 @@ interface NewsApiResponse {
   articles: NewsApiArticle[];
 }
 
+function isRelevantRiskArticle(article: NewsApiArticle): boolean {
+  const text = `${article.title} ${article.description ?? ""}`.toLowerCase();
+  const source = article.source?.name?.toLowerCase() ?? "";
+  const blockedSources = ["dealnews", "pypi", "github", "softpedia", "product hunt", "hacker news"];
+  const blockedPhrases = [
+    "free shipping", "coupon", "deal", "driver", "download", "package", "cli ",
+    "shirts", "sneakers", "sale", "discount", "investor relations", "appoints",
+    "earnings call", "stock price",
+  ];
+  const phraseKeywords = ["shipping disruption", "supply chain"];
+  const wordKeywords = [
+    "shipping", "conflict", "war", "strike", "missile", "flood", "earthquake",
+    "drought", "oil", "fuel", "diesel", "construction", "port", "canal",
+    "freight", "tariff", "sanctions", "commodity", "energy",
+  ];
+
+  if (blockedSources.some((blocked) => source.includes(blocked))) return false;
+  if (blockedPhrases.some((blocked) => text.includes(blocked))) return false;
+
+  return (
+    phraseKeywords.some((keyword) => text.includes(keyword)) ||
+    wordKeywords.some((keyword) => new RegExp(`\\b${keyword}\\b`, "i").test(text))
+  );
+}
+
 export async function fetchNewsApiHeadlines(query?: string): Promise<NewsArticle[]> {
   if (!hasNewsApi()) {
     return mockNewsHeadlines.map((n, i) => ({
@@ -53,18 +78,9 @@ export async function fetchNewsApiHeadlines(query?: string): Promise<NewsArticle
       throw new Error("NewsAPI returned no articles");
     }
 
-    const relevance = [
-      "shipping", "supply chain", "conflict", "war", "strike", "missile", "flood",
-      "earthquake", "drought", "oil", "fuel", "diesel", "construction", "port",
-      "canal", "freight", "tariff", "sanctions", "commodity", "energy",
-    ];
-
     const articles = data.articles
       .filter((a) => a.title && a.title !== "[Removed]")
-      .filter((a) => {
-        const text = `${a.title} ${a.description ?? ""}`.toLowerCase();
-        return relevance.some((keyword) => text.includes(keyword));
-      })
+      .filter(isRelevantRiskArticle)
       .map((a) => ({
         title: a.title,
         url: a.url,

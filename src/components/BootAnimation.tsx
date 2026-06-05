@@ -23,19 +23,13 @@ export default function BootAnimation({ onComplete }: BootAnimationProps) {
   const setOnline = useSuzieStore((s) => s.setOnline);
 
   const handleWake = useCallback(
-    (source: "clap" | "voice" | "manual" = "manual") => {
+    (source: "clap" | "voice") => {
       if (wakingRef.current || phase !== "listen") return;
       wakingRef.current = true;
 
       setPhase("booting");
       wakeUp();
-      addLog(
-        source === "clap"
-          ? "Clap detected — SUZIE awakening..."
-          : source === "voice"
-          ? "Voice wake detected — SUZIE awakening..."
-          : "Manual activation — SUZIE awakening..."
-      );
+      addLog(source === "clap" ? "Clap detected - SUZIE awakening..." : "Voice wake detected - SUZIE awakening...");
 
       setTimeout(() => {
         setPhase("online");
@@ -58,7 +52,7 @@ export default function BootAnimation({ onComplete }: BootAnimationProps) {
   );
 
   useEffect(() => {
-    addLog("Boot sequence initiated — listening for clap and voice");
+    addLog("Boot sequence initiated - listening for clap and voice");
   }, [addLog]);
 
   return (
@@ -114,14 +108,6 @@ export default function BootAnimation({ onComplete }: BootAnimationProps) {
                 onWake={() => handleWake("voice")}
                 onCommand={() => {}}
               />
-
-              <button
-                type="button"
-                onClick={() => handleWake("manual")}
-                className="mt-2 px-6 py-2 border border-cyan-400/30 rounded-lg text-cyan-400 text-sm hover:bg-cyan-400/10 transition-all tracking-wider"
-              >
-                MANUAL ACTIVATE
-              </button>
 
               <p className="text-[10px] text-gray-600 font-mono">Allow microphone when prompted</p>
             </motion.div>

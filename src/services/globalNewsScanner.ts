@@ -11,6 +11,10 @@ const COUNTRY_COORDS: Record<string, { lat: number; lng: number; region: string 
   india: { lat: 20.5, lng: 78.9, region: "South Asia" },
   "sri lanka": { lat: 7.8, lng: 80.7, region: "South Asia" },
   ukraine: { lat: 48.3, lng: 31.1, region: "Eastern Europe" },
+  lebanon: { lat: 33.9, lng: 35.9, region: "Middle East" },
+  iran: { lat: 32.4, lng: 53.7, region: "Middle East" },
+  israel: { lat: 31.0, lng: 35.0, region: "Middle East" },
+  kuwait: { lat: 29.3, lng: 47.5, region: "Middle East" },
   yemen: { lat: 15.5, lng: 48.5, region: "Middle East" },
   "saudi arabia": { lat: 24.7, lng: 46.7, region: "Middle East" },
   "united states": { lat: 39.8, lng: -98.5, region: "North America" },
@@ -55,6 +59,31 @@ function articleToEvent(article: { title: string; snippet: string; source: strin
   };
 }
 
+function isOperationalRiskArticle(article: { title: string; snippet: string; source: string }): boolean {
+  const text = `${article.title} ${article.snippet}`.toLowerCase();
+  const source = article.source.toLowerCase();
+  const blockedSources = ["dealnews", "pypi", "github", "softpedia", "product hunt", "hacker news"];
+  const blockedPhrases = [
+    "free shipping", "coupon", "deal", "driver", "download", "package", "cli ",
+    "shirts", "sneakers", "sale", "discount", "investor relations", "appoints",
+    "earnings call", "stock price",
+  ];
+  const phraseKeywords = ["shipping disruption", "supply chain", "fuel shortage", "port closure"];
+  const wordKeywords = [
+    "conflict", "war", "missile", "strike", "flood", "earthquake", "drought",
+    "oil", "fuel", "diesel", "construction", "port", "canal", "freight",
+    "tariff", "sanctions", "commodity", "energy",
+  ];
+
+  if (blockedSources.some((blocked) => source.includes(blocked))) return false;
+  if (blockedPhrases.some((blocked) => text.includes(blocked))) return false;
+
+  return (
+    phraseKeywords.some((keyword) => text.includes(keyword)) ||
+    wordKeywords.some((keyword) => new RegExp(`\\b${keyword}\\b`, "i").test(text))
+  );
+}
+
 export async function scanGlobalNews(): Promise<GlobalEvent[]> {
   const query =
     '("shipping disruption" OR "supply chain" OR conflict OR war OR flood OR earthquake OR oil OR fuel OR construction OR port OR canal)';
@@ -69,6 +98,7 @@ export async function scanGlobalNews(): Promise<GlobalEvent[]> {
   if (isLive) {
     const cutoff = Date.now() - 3 * 24 * 60 * 60 * 1000;
     events = news
+      .filter(isOperationalRiskArticle)
       .filter((article) => new Date(article.publishedAt).getTime() >= cutoff)
       .slice(0, 12)
       .map(articleToEvent);
