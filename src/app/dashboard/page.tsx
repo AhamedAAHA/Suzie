@@ -13,7 +13,6 @@ import CrisisDNA from "@/components/CrisisDNA";
 import PredictionTimeline from "@/components/PredictionTimeline";
 import AnalysisModal from "@/components/AnalysisModal";
 import MissionControl from "@/components/MissionControl";
-import HolographicCore from "@/components/HolographicCore";
 import IntelligenceMemoryCenter from "@/components/IntelligenceMemoryCenter";
 import GlobalForesightCenter from "@/components/GlobalForesightCenter";
 import ExecutiveBriefingRoom from "@/components/ExecutiveBriefingRoom";
@@ -153,11 +152,11 @@ export default function DashboardPage() {
     }
   }, [addLog, setAICoreState, setCurrentModule, setExecutiveBriefing]);
 
-  const runAnalysisWorkflow = useCallback(async (query: string) => {
+  const runAnalysisWorkflow = useCallback(async (query: string, options?: { openModal?: boolean }) => {
     setAnalysisStage("detected");
     setAICoreState("thinking");
     addLog(`Input detected: "${query}"`);
-    openAnalysis();
+    if (options?.openModal) openAnalysis();
 
     await new Promise((r) => setTimeout(r, 600));
     setAnalysisStage("scanning");
@@ -206,8 +205,22 @@ export default function DashboardPage() {
 
     const lower = q.toLowerCase();
 
+    const requestedPopup =
+      lower.includes("open analysis") ||
+      lower.includes("analysis window") ||
+      lower.includes("open popup") ||
+      lower.includes("show popup") ||
+      lower.includes("open modal") ||
+      lower.includes("show analysis");
+
+    if (requestedPopup) {
+      openAnalysis();
+      addLog("Analysis window opened on user request");
+      return;
+    }
+
     if (lower.includes("scan") || lower.includes("analyze") || lower.includes("what") || lower.includes("show") || lower.includes("risk")) {
-      await runAnalysisWorkflow(q);
+      await runAnalysisWorkflow(q, { openModal: false });
       await loadForesight(q);
       return;
     }
@@ -261,7 +274,7 @@ export default function DashboardPage() {
     } finally {
       voiceBusyRef.current = false;
     }
-  }, [addCommand, addLog, loadExecutiveBrief, loadForesight, router, runAnalysisWorkflow, setAICoreState, setCurrentModule, setMissionControl, trackIntelligenceSession]);
+  }, [addCommand, addLog, loadExecutiveBrief, loadForesight, openAnalysis, router, runAnalysisWorkflow, setAICoreState, setCurrentModule, setMissionControl, trackIntelligenceSession]);
 
   if (!ready) {
     return (
@@ -355,11 +368,6 @@ export default function DashboardPage() {
           >
             <GlobeScene events={events} className="w-full h-full" />
 
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none">
-              <HolographicCore state={aiCoreState} speaking={voiceBusyRef.current} size={142} />
-              <p className="font-display text-[10px] text-cyan-400/70 mt-1 tracking-[0.2em]">SCANNING</p>
-            </div>
-
             <div className="absolute bottom-3 left-3 right-3 glass-panel p-3 pointer-events-none">
               <RiskPanel scores={riskScores} compact />
             </div>
@@ -447,6 +455,14 @@ export default function DashboardPage() {
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-cyan-400/30 text-[11px] font-display tracking-wider text-cyan-400 hover:bg-cyan-400/10"
               >
                 <FileText className="w-3.5 h-3.5" /> Report
+              </motion.button>
+              <motion.button
+                onClick={() => openAnalysis()}
+                whileHover={{ scale: 1.03, boxShadow: "0 0 16px rgba(0,240,255,0.2)" }}
+                whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-cyan-400/30 text-[11px] font-display tracking-wider text-cyan-400 hover:bg-cyan-400/10"
+              >
+                <BrainCircuit className="w-3.5 h-3.5" /> Analysis Window
               </motion.button>
               <motion.button
                 onClick={() => setMissionControl(true)}

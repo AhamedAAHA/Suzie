@@ -7,6 +7,7 @@ interface HolographicCoreProps {
   state: AICoreState;
   speaking?: boolean;
   size?: number;
+  showLabel?: boolean;
 }
 
 const STATE_COLOR: Record<AICoreState, string> = {
@@ -29,6 +30,9 @@ const STATE_LABEL: Record<AICoreState, string> = {
 
 export default function HolographicCore({ state, speaking = false, size = 190 }: HolographicCoreProps) {
   const color = STATE_COLOR[state];
+  const coreBase = "#00d7ff";
+  const danger = state === "warning";
+  const success = state === "success";
 
   return (
     <div className="relative flex flex-col items-center">
@@ -43,15 +47,15 @@ export default function HolographicCore({ state, speaking = false, size = 190 }:
             key={ring}
             className="absolute inset-0 rounded-full border"
             style={{
-              margin: -14 * (ring + 1),
-              borderColor: `${color}55`,
+              margin: -10 * (ring + 1),
+              borderColor: `${color}40`,
             }}
             animate={{
               rotate: 360,
-              opacity: state === "warning" ? [0.3, 0.85, 0.3] : [0.2, 0.6, 0.2],
+              opacity: danger ? [0.2, 0.7, 0.2] : [0.16, 0.45, 0.16],
             }}
             transition={{
-              duration: 7 + ring * 3,
+              duration: 8 + ring * 2.5,
               repeat: Infinity,
               ease: "linear",
             }}
@@ -80,13 +84,13 @@ export default function HolographicCore({ state, speaking = false, size = 190 }:
         <motion.div
           className="absolute inset-0 rounded-full"
           style={{
-            background: `radial-gradient(circle at 35% 35%, ${color}, #0a1c34 52%, #030712)`,
-            boxShadow: `0 0 40px ${color}66, 0 0 90px ${color}22, inset 0 0 30px ${color}44`,
+            background: `radial-gradient(circle at 35% 35%, ${coreBase}, #0a1c34 52%, #030712)`,
+            boxShadow: `0 0 26px ${color}44, 0 0 56px ${color}22, inset 0 0 18px ${coreBase}50`,
           }}
           animate={
-            state === "warning"
+            danger
               ? { filter: ["brightness(1)", "brightness(1.25)", "brightness(1)"] }
-              : state === "success"
+              : success
               ? { filter: ["brightness(1)", "brightness(1.2)", "brightness(1)"] }
               : { rotate: [0, 5, 0, -5, 0] }
           }
@@ -101,13 +105,13 @@ export default function HolographicCore({ state, speaking = false, size = 190 }:
           <div className="absolute inset-0 rounded-full overflow-hidden">
             <motion.div
               className="absolute w-full h-[2px]"
-              style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }}
+              style={{ background: `linear-gradient(90deg, transparent, ${coreBase}, transparent)` }}
               animate={{ top: ["0%", "100%"] }}
               transition={{ duration: 1.8, repeat: Infinity, ease: "linear" }}
             />
             <motion.div
               className="absolute h-full w-[2px]"
-              style={{ background: `linear-gradient(180deg, transparent, ${color}, transparent)` }}
+              style={{ background: `linear-gradient(180deg, transparent, ${coreBase}, transparent)` }}
               animate={{ left: ["0%", "100%"] }}
               transition={{ duration: 2.1, repeat: Infinity, ease: "linear" }}
             />
@@ -121,7 +125,7 @@ export default function HolographicCore({ state, speaking = false, size = 190 }:
               <motion.div
                 key={n}
                 className="absolute inset-0 rounded-full border"
-                style={{ borderColor: `${color}55` }}
+                style={{ borderColor: `${coreBase}45` }}
                 animate={{ scale: [0.8, 1.35], opacity: [0.9, 0] }}
                 transition={{
                   duration: 1.4,
@@ -134,11 +138,10 @@ export default function HolographicCore({ state, speaking = false, size = 190 }:
           </div>
         )}
       </motion.div>
-      <div className="mt-3 text-center">
-        <p className="font-display text-[10px] tracking-[0.25em]" style={{ color }}>
-          SUZIE HOLOGRAPHIC CORE
+      <div className="mt-1 text-center">
+        <p className="font-terminal text-[9px] px-2 py-0.5 rounded border border-cyan-400/20 bg-black/45 text-cyan-300/85 tracking-wider">
+          {STATE_LABEL[state]}
         </p>
-        <p className="font-terminal text-[10px] text-gray-500 mt-0.5">{STATE_LABEL[state]}</p>
       </div>
     </div>
   );
