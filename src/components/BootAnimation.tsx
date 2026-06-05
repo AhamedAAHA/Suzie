@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic } from "lucide-react";
 import SuzieLogo from "./SuzieLogo";
 import ClapDetector from "./ClapDetector";
 import VoiceCommand from "./VoiceCommand";
@@ -15,7 +15,7 @@ interface BootAnimationProps {
 
 export default function BootAnimation({ onComplete }: BootAnimationProps) {
   const [phase, setPhase] = useState<"listen" | "booting" | "online">("listen");
-  const [micEnabled, setMicEnabled] = useState(false);
+  const micEnabled = true;
   const wakingRef = useRef(false);
   const wakeUp = useSuzieStore((s) => s.wakeUp);
   const addLog = useSuzieStore((s) => s.addLog);
@@ -57,13 +57,8 @@ export default function BootAnimation({ onComplete }: BootAnimationProps) {
     [phase, wakeUp, addLog, userName, setOnline, onComplete]
   );
 
-  const enableMic = useCallback(() => {
-    setMicEnabled(true);
-    addLog("Microphone enabled — listening for clap and voice");
-  }, [addLog]);
-
   useEffect(() => {
-    addLog("Boot sequence initiated — awaiting wake signal");
+    addLog("Boot sequence initiated — listening for clap and voice");
   }, [addLog]);
 
   return (
@@ -85,7 +80,7 @@ export default function BootAnimation({ onComplete }: BootAnimationProps) {
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col items-center gap-8 z-10 px-4 max-w-lg w-full"
       >
-        <button type="button" onClick={!micEnabled ? enableMic : undefined} className="focus:outline-none">
+        <Link href="/" aria-label="Go to main page">
           <motion.div
             animate={
               phase === "booting" || micEnabled
@@ -96,7 +91,7 @@ export default function BootAnimation({ onComplete }: BootAnimationProps) {
           >
             <SuzieLogo className="w-56 sm:w-64" />
           </motion.div>
-        </button>
+        </Link>
 
         <AnimatePresence mode="wait">
           {phase === "listen" && (
@@ -112,28 +107,13 @@ export default function BootAnimation({ onComplete }: BootAnimationProps) {
                 Clap twice or say &quot;Hey Suzie&quot; to activate
               </p>
 
-              {!micEnabled ? (
-                <motion.button
-                  type="button"
-                  onClick={enableMic}
-                  className="flex items-center gap-3 mx-auto px-8 py-4 rounded-xl border border-cyan-400/50 text-cyan-400 font-semibold tracking-wider hover:bg-cyan-400/10 transition-all"
-                  whileHover={{ scale: 1.02, boxShadow: "0 0 25px rgba(0,240,255,0.2)" }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Mic className="w-5 h-5" />
-                  ENABLE MICROPHONE
-                </motion.button>
-              ) : (
-                <>
-                  <ClapDetector onClap={() => handleWake("clap")} enabled={micEnabled} />
-                  <VoiceCommand
-                    autoStart
-                    enabled={micEnabled}
-                    onWake={() => handleWake("voice")}
-                    onCommand={() => {}}
-                  />
-                </>
-              )}
+              <ClapDetector onClap={() => handleWake("clap")} enabled={micEnabled} />
+              <VoiceCommand
+                autoStart
+                enabled={micEnabled}
+                onWake={() => handleWake("voice")}
+                onCommand={() => {}}
+              />
 
               <button
                 type="button"
@@ -143,9 +123,7 @@ export default function BootAnimation({ onComplete }: BootAnimationProps) {
                 MANUAL ACTIVATE
               </button>
 
-              <p className="text-[10px] text-gray-600 font-mono">
-                Use Chrome or Edge · Allow microphone when prompted
-              </p>
+              <p className="text-[10px] text-gray-600 font-mono">Allow microphone when prompted</p>
             </motion.div>
           )}
 

@@ -27,7 +27,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const {
     events, riskScores, selectedEvent, briefing, logs, activeFilter,
-    userMemory, isOnline, selectEvent, setBriefing, addLog, setActiveFilter,
+    isOnline, selectEvent, setBriefing, addLog, setActiveFilter,
   } = useSuzieStore();
 
   const [response, setResponse] = useState("");
