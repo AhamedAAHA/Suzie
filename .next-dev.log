@@ -1,0 +1,15 @@
+
+> suzie-ai@0.1.0 dev
+> next dev -p 3000
+
+   ▲ Next.js 15.5.19
+   - Local:        http://localhost:3000
+   - Network:      http://10.0.236.10:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 7.3s
+ ○ Compiling /api/scan ...
+ ✓ Compiled /api/scan in 6.3s (350 modules)
+ ○ Compiling / ...
+ GET /api/scan 200 in 12938ms
