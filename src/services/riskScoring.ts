@@ -22,7 +22,7 @@ export function calculateRiskScores(events: GlobalEvent[]): RiskScores {
       relevant.reduce((sum, e) => sum + RISK_WEIGHTS[e.riskLevel], 0)
     );
     const key = cat === "supply_chain" ? "supplyChain" : cat;
-    (scores as Record<string, number>)[key] = Math.max(score, 20 + Math.random() * 15);
+    (scores as Record<string, number>)[key] = Math.max(score, 20);
   }
 
   const overall = Math.min(

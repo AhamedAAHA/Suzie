@@ -28,12 +28,18 @@ export async function fetchNewsApiHeadlines(query?: string): Promise<NewsArticle
   }
 
   try {
-    const q = query ?? "global crisis OR shipping OR conflict OR climate";
+    const q =
+      query ??
+      '("shipping disruption" OR "supply chain" OR war OR conflict OR flood OR earthquake OR drought OR oil OR diesel OR fuel OR construction OR port OR canal)';
+    const from = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
     const url = new URL("https://newsapi.org/v2/everything");
     url.searchParams.set("q", q);
+    url.searchParams.set("searchIn", "title,description");
     url.searchParams.set("language", "en");
     url.searchParams.set("sortBy", "publishedAt");
     url.searchParams.set("pageSize", "15");
+    url.searchParams.set("from", from);
+    url.searchParams.set("excludeDomains", "news.ycombinator.com,github.com,medium.com");
     url.searchParams.set("apiKey", env.newsApi.apiKey);
 
     const res = await fetch(url.toString(), { next: { revalidate: 300 } });
@@ -47,13 +53,28 @@ export async function fetchNewsApiHeadlines(query?: string): Promise<NewsArticle
       throw new Error("NewsAPI returned no articles");
     }
 
-    return data.articles.map((a) => ({
-      title: a.title,
-      url: a.url,
-      source: a.source?.name ?? "NewsAPI",
-      publishedAt: a.publishedAt,
-      snippet: a.description ?? a.title,
-    }));
+    const relevance = [
+      "shipping", "supply chain", "conflict", "war", "strike", "missile", "flood",
+      "earthquake", "drought", "oil", "fuel", "diesel", "construction", "port",
+      "canal", "freight", "tariff", "sanctions", "commodity", "energy",
+    ];
+
+    const articles = data.articles
+      .filter((a) => a.title && a.title !== "[Removed]")
+      .filter((a) => {
+        const text = `${a.title} ${a.description ?? ""}`.toLowerCase();
+        return relevance.some((keyword) => text.includes(keyword));
+      })
+      .map((a) => ({
+        title: a.title,
+        url: a.url,
+        source: a.source?.name ?? "NewsAPI",
+        publishedAt: a.publishedAt,
+        snippet: a.description ?? a.title,
+      }));
+
+    if (articles.length === 0) throw new Error("NewsAPI returned no relevant articles");
+    return articles;
   } catch {
     return mockNewsHeadlines.map((n, i) => ({
       title: n.headline,
