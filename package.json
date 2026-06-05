@@ -13,6 +13,7 @@
     "@react-three/fiber": "^9.1.2",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.107.0",
+    "@types/topojson-client": "^3.1.5",
     "framer-motion": "^12.6.3",
     "lucide-react": "^0.487.0",
     "next": "^15.2.4",
@@ -20,6 +21,8 @@
     "react-dom": "^19.0.0",
     "recharts": "^2.15.1",
     "three": "^0.175.0",
+    "topojson-client": "^3.1.0",
+    "world-atlas": "^2.0.2",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
