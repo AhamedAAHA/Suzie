@@ -208,17 +208,65 @@ export async function generateReport(
   };
 }
 
+function isSmallTalk(query: string): boolean {
+  const q = query.toLowerCase().replace(/[^a-z\s]/g, " ").replace(/\s+/g, " ").trim();
+  const patterns = [
+    "can you hear me", "do you hear me", "are you there", "are you online",
+    "you there", "hello", "hi", "hey", "good morning", "good afternoon",
+    "good evening", "how are you", "what is your name", "who are you",
+    "thank you", "thanks", "test", "testing", "are you awake", "wake up",
+  ];
+  return patterns.some((p) => q === p || q.startsWith(p + " ") || q.endsWith(" " + p) || q.includes(p));
+}
+
+function smallTalkReply(query: string): string {
+  const q = query.toLowerCase();
+  if (q.includes("hear me") || q.includes("you there") || q.includes("are you online") || q.includes("are you awake")) {
+    return `Yes ${env.user.name}, I can hear you clearly. SUZIE is online and listening. How can I help?`;
+  }
+  if (q.includes("your name") || q.includes("who are you")) {
+    return `I'm SUZIE, your global intelligence assistant. I monitor world events and their impact on construction and supply chains. What would you like to know?`;
+  }
+  if (q.includes("how are you")) {
+    return `I'm running at full capacity ${env.user.name}. All systems nominal. What can I do for you?`;
+  }
+  if (q.includes("thank")) {
+    return `You're welcome ${env.user.name}. I'm always listening.`;
+  }
+  if (q.includes("test")) {
+    return `Loud and clear ${env.user.name}. Voice link is working. Ask me anything.`;
+  }
+  return `Hello ${env.user.name}. SUZIE is online and ready. Ask me about global risks, supply chains, or construction impacts.`;
+}
+
 export async function answerVoiceQuery(query: string, events: GlobalEvent[]): Promise<string> {
+  if (isSmallTalk(query)) {
+    return smallTalkReply(query);
+  }
+
+  const eventContext = events
+    .slice(0, 8)
+    .map((e) => `${e.title} (${e.country}, ${e.riskLevel})`)
+    .join("; ");
+
   const ai = await callAIML(
     [
       {
         role: "system",
         content:
-          "You are SUZIE global intelligence AI. Answer concisely (2-4 sentences) about global risks, construction, supply chains, and Sri Lanka impacts.",
+          `You are SUZIE, a warm, sharp voice assistant (Jarvis-style) for ${env.user.name}. ` +
+          "Answer the user's ACTUAL question directly and conversationally in 1-3 short spoken sentences. " +
+          "If they greet you, test the mic, or make small talk, reply naturally and briefly — never recite news. " +
+          "Only mention global risks, construction, supply chains, or Sri Lanka when the user actually asks about them. " +
+          "Never dump lists of events unless explicitly asked.",
       },
       {
         role: "user",
-        content: `Query: ${query}. Live events: ${events.slice(0, 8).map((e) => `${e.title} (${e.country}, ${e.riskLevel})`).join("; ")}`,
+        content:
+          `User said: "${query}".` +
+          (eventContext
+            ? `\n\nBackground intel (reference ONLY if relevant to their question): ${eventContext}`
+            : ""),
       },
     ],
     env.aiml.models.chat
@@ -242,7 +290,8 @@ export async function answerVoiceQuery(query: string, events: GlobalEvent[]): Pr
   if (lower.includes("construction")) {
     return "Construction mode activated. Steel, cement, and diesel costs elevated. Review BOQ contingency and accelerate critical-path procurement.";
   }
-  return `Processing: "${query}". Global monitoring active. Ask about specific countries, materials, or scenarios.`;
+  if (isSmallTalk(query)) return smallTalkReply(query);
+  return `I heard you ${env.user.name}, but I'd need a bit more detail. Try asking about global risks, supply chains, fuel, or construction impacts.`;
 }
 
 export async function synthesizeSpeech(text: string): Promise<ArrayBuffer | null> {
