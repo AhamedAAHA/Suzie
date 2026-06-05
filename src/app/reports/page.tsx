@@ -14,6 +14,17 @@ export default function ReportsPage() {
   const addLog = useSuzieStore((s) => s.addLog);
 
   const handleGenerate = async () => {
+    try {
+      const res = await fetch("/api/reports", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        addReport(data.report);
+        addLog(`Intelligence report generated: ${data.report.title}`);
+        return data.report;
+      }
+    } catch {
+      // fall through
+    }
     const report = await generateReport(events, userMemory.name);
     addReport(report);
     addLog(`Intelligence report generated: ${report.title}`);

@@ -37,9 +37,32 @@ export default function DashboardPage() {
       router.push("/boot");
       return;
     }
-    generateBriefing(events, userMemory.name).then(setBriefing);
-    addLog("Dashboard loaded — global scan complete");
-  }, [isOnline, events, userMemory.name, setBriefing, addLog, router]);
+
+    async function loadLiveData() {
+      addLog("Scanning live global intelligence feeds...");
+      try {
+        const res = await fetch("/api/scan");
+        if (res.ok) {
+          const data = await res.json();
+          useSuzieStore.getState().setEvents(data.events);
+          useSuzieStore.getState().setRiskScores(data.riskScores);
+          setBriefing(data.briefing);
+          if (data.events[0]) selectEvent(data.events[0]);
+          addLog(`Live scan complete — ${data.events.length} events, risk ${data.riskScores.overall}/100`);
+        } else {
+          const briefing = await generateBriefing(events, userMemory.name);
+          setBriefing(briefing);
+          addLog("Using cached data — live scan unavailable");
+        }
+      } catch {
+        const briefing = await generateBriefing(events, userMemory.name);
+        setBriefing(briefing);
+        addLog("Offline mode — using cached intelligence data");
+      }
+    }
+
+    loadLiveData();
+  }, [isOnline, userMemory.name, setBriefing, addLog, router, events, selectEvent]);
 
   const handleVoice = useCallback(async (query: string) => {
     const answer = await answerVoiceQuery(query, events);
