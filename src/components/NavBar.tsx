@@ -3,13 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Globe, Zap, HardHat, FileText, Settings, LayoutDashboard } from "lucide-react";
+import { Globe, Zap, HardHat, FileText, Settings, LayoutDashboard, BrainCircuit, Radar, ShieldAlert, FlaskConical } from "lucide-react";
 import SuzieLogo from "./SuzieLogo";
 import WorldPulse from "./WorldPulse";
 import { useSuzieStore } from "@/store/suzieStore";
 
 const NAV = [
   { href: "/dashboard", label: "Command", icon: LayoutDashboard },
+  { href: "/dashboard?module=memory", label: "Memory", icon: BrainCircuit },
+  { href: "/dashboard?module=foresight", label: "Foresight", icon: Radar },
+  { href: "/dashboard?module=briefing", label: "Briefing", icon: ShieldAlert },
+  { href: "/dashboard?module=scenario", label: "Scenario", icon: FlaskConical },
   { href: "/simulator", label: "Ripple", icon: Zap },
   { href: "/construction", label: "Construction", icon: HardHat },
   { href: "/reports", label: "Reports", icon: FileText },
@@ -37,7 +41,9 @@ export default function NavBar() {
 
         <div className="flex items-center gap-1">
           {NAV.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href;
+            const active = href.startsWith("/dashboard?")
+              ? pathname === "/dashboard"
+              : pathname === href;
             return (
               <Link key={href} href={href}>
                 <motion.div
