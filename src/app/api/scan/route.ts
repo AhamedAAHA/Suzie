@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { generateBriefing } from "@/services/aimlService";
 import { scanGlobalNews } from "@/services/globalNewsScanner";
 import { calculateRiskScores } from "@/services/riskScoring";
+import { generateBriefing } from "@/services/aimlService";
 import { env } from "@/lib/env";
 
 export async function GET() {
   const events = await scanGlobalNews();
   const riskScores = calculateRiskScores(events);
   const briefing = await generateBriefing(events, env.user.name);
-  return NextResponse.json({ briefing, events: events.slice(0, 10), riskScores });
+
+  return NextResponse.json({ events, riskScores, briefing });
 }
