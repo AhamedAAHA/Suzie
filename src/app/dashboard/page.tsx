@@ -118,8 +118,8 @@ export default function DashboardPage() {
   const prediction = generatePrediction(selectedEvent?.title ?? "stable");
 
   return (
-    <div className="min-h-screen pt-24 pb-4 px-3 grid-bg">
-      <div className="max-w-[1800px] mx-auto h-[calc(100vh-7rem)] grid grid-cols-12 grid-rows-[1fr_auto] gap-3">
+    <div className="min-h-screen pt-32 pb-4 px-3 grid-bg">
+      <div className="max-w-[1800px] mx-auto h-[calc(100vh-9rem)] grid grid-cols-12 grid-rows-[1fr_auto] gap-3">
         {/* Left Panel */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}

@@ -98,7 +98,7 @@ export default function BootAnimation({ onComplete }: BootAnimationProps) {
             >
               <h2 className="sr-only">SUZIE AI</h2>
               <p className="text-gray-400 text-sm tracking-wide">
-                Clap twice or say &quot;Hey Suzie&quot; to activate
+                Use voice wake or clap twice to activate
               </p>
 
               <ClapDetector onClap={() => handleWake("clap")} enabled={micEnabled} />

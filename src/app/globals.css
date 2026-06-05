@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=Share+Tech+Mono&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap");
 @import "tailwindcss";
 
 @theme inline {
@@ -11,9 +11,9 @@
   --color-suzie-yellow: #ffd60a;
   --color-suzie-blue: #0a84ff;
   --color-suzie-green: #30d158;
-  --font-suzie: "Inter", system-ui, sans-serif;
-  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
-  --font-terminal: "Share Tech Mono", "Fira Code", monospace;
+  --font-suzie: "Manrope", system-ui, sans-serif;
+  --font-display: "Sora", "Manrope", system-ui, sans-serif;
+  --font-terminal: "Roboto Mono", "Fira Code", monospace;
 }
 
 * {

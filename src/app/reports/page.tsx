@@ -32,7 +32,7 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="min-h-screen pt-16 px-6 pb-8 grid-bg">
+    <div className="min-h-screen pt-24 px-6 pb-8 grid-bg">
       <div className="max-w-3xl mx-auto space-y-6">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center gap-3 mb-2">
