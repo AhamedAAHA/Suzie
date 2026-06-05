@@ -56,7 +56,8 @@ function articleToEvent(article: { title: string; snippet: string; source: strin
 }
 
 export async function scanGlobalNews(): Promise<GlobalEvent[]> {
-  const query = "global crisis shipping conflict climate fuel construction";
+  const query =
+    '("shipping disruption" OR "supply chain" OR conflict OR war OR flood OR earthquake OR oil OR fuel OR construction OR port OR canal)';
   const news = await fetchGlobalNews(query);
 
   const isLive =
@@ -66,7 +67,11 @@ export async function scanGlobalNews(): Promise<GlobalEvent[]> {
   let events: GlobalEvent[] = [];
 
   if (isLive) {
-    events = news.slice(0, 12).map(articleToEvent);
+    const cutoff = Date.now() - 3 * 24 * 60 * 60 * 1000;
+    events = news
+      .filter((article) => new Date(article.publishedAt).getTime() >= cutoff)
+      .slice(0, 12)
+      .map(articleToEvent);
   }
 
   // Merge weather events for focus country

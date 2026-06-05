@@ -140,7 +140,17 @@ export function buildRippleChain(scenario: string): RippleNode[] {
   return scenarios.oil;
 }
 
-export function generatePrediction(_scenario?: string): PredictionTimeline {
+export function generatePrediction(scenario = "stable"): PredictionTimeline {
+  const lower = scenario.toLowerCase();
+  if (lower.includes("rain") || lower.includes("flood") || lower.includes("weather")) {
+    return {
+      hours24: "Local site exposure rises. Outdoor work, delivery timing, and drainage risks need immediate review.",
+      days7: "Transport delays and site productivity losses may appear if severe weather continues.",
+      days30: "Material stock buffers and subcontractor schedules should be rebalanced around weather downtime.",
+      months6: "Persistent climate disruption may increase contingency allowances and insurance scrutiny.",
+    };
+  }
+
   return {
     hours24: "Initial market reaction. Freight surcharges applied. Supply chain alerts issued.",
     days7: "Material price adjustments visible. Import lead times extend. BOQ reviews triggered.",
