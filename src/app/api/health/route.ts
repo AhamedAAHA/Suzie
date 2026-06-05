@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { env, hasAiml, hasBrightData, hasNewsApi, hasOpenWeather, hasSupabase } from "@/lib/env";
+import { env, hasAiml, hasBrightData, hasNewsApi, hasOpenWeather, hasSpeechmatics, hasSupabase } from "@/lib/env";
+import { synthesizeSpeechmatics } from "@/services/speechmaticsService";
 import { checkSupabaseHealth } from "@/services/supabaseService";
 
 async function testAiml(): Promise<{ ok: boolean; message: string; latencyMs: number }> {
@@ -97,12 +98,26 @@ async function testOpenWeather(): Promise<{ ok: boolean; message: string; latenc
   }
 }
 
+async function testSpeechmatics(): Promise<{ ok: boolean; message: string; latencyMs: number }> {
+  if (!hasSpeechmatics()) return { ok: false, message: "Not configured", latencyMs: 0 };
+  const start = Date.now();
+  try {
+    const audio = await synthesizeSpeechmatics("SUZIE online");
+    const latencyMs = Date.now() - start;
+    if (!audio || audio.byteLength === 0) return { ok: false, message: "Empty audio response", latencyMs };
+    return { ok: true, message: `Voice ${env.speechmatics.voice} — ${audio.byteLength} bytes`, latencyMs };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Failed", latencyMs: Date.now() - start };
+  }
+}
+
 export async function GET() {
-  const [aiml, brightData, newsApi, openWeather, supabase] = await Promise.all([
+  const [aiml, brightData, newsApi, openWeather, speechmatics, supabase] = await Promise.all([
     testAiml(),
     testBrightData(),
     testNewsApi(),
     testOpenWeather(),
+    testSpeechmatics(),
     checkSupabaseHealth(),
   ]);
 
@@ -111,6 +126,7 @@ export async function GET() {
     brightData: { ...brightData, configured: hasBrightData(), zone: env.brightData.serpZone },
     newsApi: { ...newsApi, configured: hasNewsApi() },
     openWeather: { ...openWeather, configured: hasOpenWeather() },
+    speechmatics: { ...speechmatics, configured: hasSpeechmatics(), voice: env.speechmatics.voice },
     supabase: { ok: supabase.ok, message: supabase.message, configured: hasSupabase(), url: env.supabase.url },
   };
 

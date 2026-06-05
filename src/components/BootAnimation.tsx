@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import SuzieOrb from "./SuzieOrb";
+import { Mic } from "lucide-react";
+import SuzieLogo from "./SuzieLogo";
 import ClapDetector from "./ClapDetector";
 import VoiceCommand from "./VoiceCommand";
 import { useSuzieStore } from "@/store/suzieStore";
@@ -14,33 +15,52 @@ interface BootAnimationProps {
 
 export default function BootAnimation({ onComplete }: BootAnimationProps) {
   const [phase, setPhase] = useState<"listen" | "booting" | "online">("listen");
+  const [micEnabled, setMicEnabled] = useState(false);
+  const wakingRef = useRef(false);
   const wakeUp = useSuzieStore((s) => s.wakeUp);
   const addLog = useSuzieStore((s) => s.addLog);
   const userName = useSuzieStore((s) => s.userMemory.name);
   const setOnline = useSuzieStore((s) => s.setOnline);
 
-  const handleWake = () => {
-    setPhase("booting");
-    wakeUp();
-    addLog("Clap detected — SUZIE awakening...");
+  const handleWake = useCallback(
+    (source: "clap" | "voice" | "manual" = "manual") => {
+      if (wakingRef.current || phase !== "listen") return;
+      wakingRef.current = true;
 
-    setTimeout(() => {
-      setPhase("online");
-      setOnline(true);
-      const hour = new Date().getHours();
-      const greeting =
-        hour < 12
-          ? `Good morning ${userName}. SUZIE is online. I scanned global signals. Three major risks need your attention today. Shall I brief you?`
-          : hour < 17
-          ? `Good afternoon ${userName}. Global monitoring is active. Construction material risk is currently moderate.`
-          : `Welcome back ${userName}. Since your last session, six new global events were detected.`;
+      setPhase("booting");
+      wakeUp();
+      addLog(
+        source === "clap"
+          ? "Clap detected — SUZIE awakening..."
+          : source === "voice"
+          ? "Voice wake detected — SUZIE awakening..."
+          : "Manual activation — SUZIE awakening..."
+      );
 
-      speakGreeting(greeting);
-      addLog("Voice greeting delivered");
+      setTimeout(() => {
+        setPhase("online");
+        setOnline(true);
+        const hour = new Date().getHours();
+        const greeting =
+          hour < 12
+            ? `Good morning ${userName}. SUZIE is online. I scanned global signals. Three major risks need your attention today. Shall I brief you?`
+            : hour < 17
+            ? `Good afternoon ${userName}. Global monitoring is active. Construction material risk is currently moderate.`
+            : `Welcome back ${userName}. Since your last session, six new global events were detected.`;
 
-      setTimeout(onComplete, 2000);
-    }, 2500);
-  };
+        speakGreeting(greeting);
+        addLog("Voice greeting delivered");
+
+        setTimeout(onComplete, 2000);
+      }, 2500);
+    },
+    [phase, wakeUp, addLog, userName, setOnline, onComplete]
+  );
+
+  const enableMic = useCallback(() => {
+    setMicEnabled(true);
+    addLog("Microphone enabled — listening for clap and voice");
+  }, [addLog]);
 
   useEffect(() => {
     addLog("Boot sequence initiated — awaiting wake signal");
@@ -63,9 +83,20 @@ export default function BootAnimation({ onComplete }: BootAnimationProps) {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center gap-8 z-10"
+        className="flex flex-col items-center gap-8 z-10 px-4 max-w-lg w-full"
       >
-        <SuzieOrb size={160} active={phase !== "listen"} pulsing={phase === "booting"} />
+        <button type="button" onClick={!micEnabled ? enableMic : undefined} className="focus:outline-none">
+          <motion.div
+            animate={
+              phase === "booting" || micEnabled
+                ? { filter: ["drop-shadow(0 0 10px rgba(0,240,255,0.25))", "drop-shadow(0 0 28px rgba(0,240,255,0.5))", "drop-shadow(0 0 10px rgba(0,240,255,0.25))"] }
+                : undefined
+            }
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            <SuzieLogo className="w-56 sm:w-64" />
+          </motion.div>
+        </button>
 
         <AnimatePresence mode="wait">
           {phase === "listen" && (
@@ -74,24 +105,47 @@ export default function BootAnimation({ onComplete }: BootAnimationProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-center space-y-6"
+              className="text-center space-y-6 w-full"
             >
-              <h2 className="text-2xl font-bold neon-text-cyan tracking-widest">SUZIE AI</h2>
-              <p className="text-gray-400 text-sm tracking-wide">Clap or say &quot;Hey Suzie&quot; to activate</p>
-              <ClapDetector onClap={handleWake} />
-              <VoiceCommand
-                onCommand={(t) => {
-                  if (t.toLowerCase().includes("hey suzie") || t.toLowerCase().includes("activate")) {
-                    handleWake();
-                  }
-                }}
-              />
+              <h2 className="sr-only">SUZIE AI</h2>
+              <p className="text-gray-400 text-sm tracking-wide">
+                Clap twice or say &quot;Hey Suzie&quot; to activate
+              </p>
+
+              {!micEnabled ? (
+                <motion.button
+                  type="button"
+                  onClick={enableMic}
+                  className="flex items-center gap-3 mx-auto px-8 py-4 rounded-xl border border-cyan-400/50 text-cyan-400 font-semibold tracking-wider hover:bg-cyan-400/10 transition-all"
+                  whileHover={{ scale: 1.02, boxShadow: "0 0 25px rgba(0,240,255,0.2)" }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Mic className="w-5 h-5" />
+                  ENABLE MICROPHONE
+                </motion.button>
+              ) : (
+                <>
+                  <ClapDetector onClap={() => handleWake("clap")} enabled={micEnabled} />
+                  <VoiceCommand
+                    autoStart
+                    enabled={micEnabled}
+                    onWake={() => handleWake("voice")}
+                    onCommand={() => {}}
+                  />
+                </>
+              )}
+
               <button
-                onClick={handleWake}
-                className="mt-4 px-6 py-2 border border-cyan-400/30 rounded-lg text-cyan-400 text-sm hover:bg-cyan-400/10 transition-all tracking-wider"
+                type="button"
+                onClick={() => handleWake("manual")}
+                className="mt-2 px-6 py-2 border border-cyan-400/30 rounded-lg text-cyan-400 text-sm hover:bg-cyan-400/10 transition-all tracking-wider"
               >
                 MANUAL ACTIVATE
               </button>
+
+              <p className="text-[10px] text-gray-600 font-mono">
+                Use Chrome or Edge · Allow microphone when prompted
+              </p>
             </motion.div>
           )}
 
@@ -103,20 +157,23 @@ export default function BootAnimation({ onComplete }: BootAnimationProps) {
               className="text-center space-y-4"
             >
               <div className="text-cyan-400 font-mono text-sm space-y-1">
-                {["INITIALIZING NEURAL CORE...", "SCANNING GLOBAL SIGNALS...", "LOADING RISK MATRICES...", "CONNECTING DATA FEEDS..."].map(
-                  (line, i) => (
-                    <motion.p
-                      key={line}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.5 }}
-                      className="text-left"
-                    >
-                      <span className="text-green-400 mr-2">{">"}</span>
-                      {line}
-                    </motion.p>
-                  )
-                )}
+                {[
+                  "INITIALIZING NEURAL CORE...",
+                  "SCANNING GLOBAL SIGNALS...",
+                  "LOADING RISK MATRICES...",
+                  "CONNECTING DATA FEEDS...",
+                ].map((line, i) => (
+                  <motion.p
+                    key={line}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.5 }}
+                    className="text-left"
+                  >
+                    <span className="text-green-400 mr-2">{">"}</span>
+                    {line}
+                  </motion.p>
+                ))}
               </div>
               <div className="w-64 h-1 bg-gray-800 rounded-full overflow-hidden mx-auto">
                 <motion.div
@@ -138,7 +195,13 @@ export default function BootAnimation({ onComplete }: BootAnimationProps) {
             >
               <motion.h1
                 className="text-4xl font-black neon-text-cyan tracking-[0.3em]"
-                animate={{ textShadow: ["0 0 10px rgba(0,240,255,0.5)", "0 0 30px rgba(0,240,255,0.8)", "0 0 10px rgba(0,240,255,0.5)"] }}
+                animate={{
+                  textShadow: [
+                    "0 0 10px rgba(0,240,255,0.5)",
+                    "0 0 30px rgba(0,240,255,0.8)",
+                    "0 0 10px rgba(0,240,255,0.5)",
+                  ],
+                }}
                 transition={{ duration: 1, repeat: 2 }}
               >
                 SUZIE ONLINE

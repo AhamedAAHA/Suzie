@@ -41,6 +41,17 @@ const defaultMemory: UserMemory = {
   lastSession: new Date().toISOString(),
 };
 
+function persistOnline(value: boolean) {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem("suzie-online", String(value));
+}
+
+export function hydrateOnlineState() {
+  if (typeof window === "undefined") return;
+  const online = sessionStorage.getItem("suzie-online") === "true";
+  useSuzieStore.setState({ isOnline: online });
+}
+
 export const useSuzieStore = create<SuzieStore>((set, get) => ({
   isOnline: false,
   isBooting: false,
@@ -56,7 +67,10 @@ export const useSuzieStore = create<SuzieStore>((set, get) => ({
   userMemory: defaultMemory,
   activeFilter: "all",
 
-  setOnline: (v) => set({ isOnline: v }),
+  setOnline: (v) => {
+    persistOnline(v);
+    set({ isOnline: v });
+  },
   setBooting: (v) => set({ isBooting: v }),
   setListening: (v) => set({ isListening: v }),
   setSilentWatch: (v) => set({ silentWatch: v }),
@@ -81,6 +95,7 @@ export const useSuzieStore = create<SuzieStore>((set, get) => ({
     set({ isBooting: true, isListening: false });
     addLog("Wake signal detected — initializing SUZIE...");
     setTimeout(() => {
+      persistOnline(true);
       set({ isBooting: false, isOnline: true });
       addLog("SUZIE ONLINE — All systems nominal");
     }, 2500);

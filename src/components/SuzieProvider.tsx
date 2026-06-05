@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSuzieStore } from "@/store/suzieStore";
+import { hydrateOnlineState, useSuzieStore } from "@/store/suzieStore";
 import { detectNewCrises } from "@/services/crisisDetector";
 import { speakAlert } from "@/lib/speech";
 
@@ -10,6 +10,10 @@ export default function SuzieProvider({ children }: { children: React.ReactNode 
   const events = useSuzieStore((s) => s.events);
   const addLog = useSuzieStore((s) => s.addLog);
   const userName = useSuzieStore((s) => s.userMemory.name);
+
+  useEffect(() => {
+    hydrateOnlineState();
+  }, []);
 
   useEffect(() => {
     if (!silentWatch) return;

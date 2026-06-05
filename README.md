@@ -41,18 +41,31 @@ Open [http://localhost:3000](http://localhost:3000)
 2. **Boot Screen** — Clap or say "Hey Suzie" (or click Manual Activate)
 3. **Command Center** — Full 3D dashboard with live alerts, globe, and AI briefing
 
-## API Keys (Optional)
+## API Keys
 
-Add to `.env.local`:
+Copy `.env.example` to `.env.local` and fill in your keys:
 
 ```
-AIML_API_KEY=your_key
-BRIGHT_DATA_API_KEY=your_key
-NEXT_PUBLIC_USER_NAME=Hubaib
-NEXT_PUBLIC_USER_COUNTRY=Sri Lanka
+AIML_API_KEY=...
+BRIGHT_DATA_API_KEY=...
+BRIGHT_DATA_SERP_ZONE=sentra_serp
+NEWS_API_KEY=...
+OPENWEATHER_API_KEY=...
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 
-Without API keys, the app uses realistic mock data.
+Verify all connections at **Settings → API Status** or `GET /api/health`.
+
+| Service | Purpose |
+|---------|---------|
+| AIML API | AI briefings, voice Q&A, TTS |
+| Bright Data SERP | Web/news search fallback |
+| News API | Live global headlines |
+| OpenWeather | Local weather risk events |
+| Supabase | Reports cache, events cache, user prefs |
+
+Without API keys, the app falls back to realistic mock data.
 
 ## Pages
 

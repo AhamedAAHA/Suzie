@@ -38,6 +38,10 @@ export const env = {
     anonKey: trimEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
     serviceRoleKey: trimEnv(process.env.SUPABASE_SERVICE_ROLE_KEY),
   },
+  speechmatics: {
+    apiKey: trimEnv(process.env.SPEECHMATICS_API_KEY),
+    voice: trimEnv(process.env.SPEECHMATICS_TTS_VOICE) || "sarah",
+  },
   user: {
     name: trimEnv(process.env.NEXT_PUBLIC_USER_NAME) || "Hubaib",
     country: trimEnv(process.env.NEXT_PUBLIC_USER_COUNTRY) || "Sri Lanka",
@@ -62,4 +66,8 @@ export function hasOpenWeather() {
 
 export function hasSupabase() {
   return Boolean(env.supabase.url && env.supabase.anonKey);
+}
+
+export function hasSpeechmatics() {
+  return Boolean(env.speechmatics.apiKey);
 }

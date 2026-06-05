@@ -1,19 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
-import { synthesizeSpeech } from "@/services/aimlService";
+import { synthesizeSpeechmatics } from "@/services/speechmaticsService";
+import { synthesizeSpeech as synthesizeAiml } from "@/services/aimlService";
 
 export async function POST(req: NextRequest) {
   const { text } = await req.json();
   if (!text) return NextResponse.json({ error: "text required" }, { status: 400 });
 
-  const audio = await synthesizeSpeech(text);
-  if (!audio) {
-    return NextResponse.json({ error: "TTS unavailable — using browser speech" }, { status: 503 });
+  // Prefer Speechmatics (natural voice for SUZIE)
+  const speechmaticsAudio = await synthesizeSpeechmatics(text);
+  if (speechmaticsAudio) {
+    return new NextResponse(speechmaticsAudio, {
+      headers: {
+        "Content-Type": "audio/wav",
+        "X-TTS-Provider": "speechmatics",
+        "Cache-Control": "no-store",
+      },
+    });
   }
 
-  return new NextResponse(audio, {
-    headers: {
-      "Content-Type": "audio/mpeg",
-      "Cache-Control": "no-store",
-    },
-  });
+  // Fallback to AIML TTS
+  const aimlAudio = await synthesizeAiml(text);
+  if (aimlAudio) {
+    return new NextResponse(aimlAudio, {
+      headers: {
+        "Content-Type": "audio/mpeg",
+        "X-TTS-Provider": "aiml",
+        "Cache-Control": "no-store",
+      },
+    });
+  }
+
+  return NextResponse.json({ error: "TTS unavailable — using browser speech" }, { status: 503 });
 }

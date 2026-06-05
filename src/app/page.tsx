@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChevronRight, Shield, Globe, Zap } from "lucide-react";
 import dynamic from "next/dynamic";
-import SuzieOrb from "@/components/SuzieOrb";
+import SuzieLogo from "@/components/SuzieLogo";
 
 const GlobeScene = dynamic(() => import("@/components/GlobeScene"), { ssr: false });
 
@@ -25,17 +25,13 @@ export default function LandingPage() {
           transition={{ duration: 0.8 }}
           className="text-center max-w-2xl"
         >
-          <div className="flex justify-center mb-8">
-            <SuzieOrb size={140} active pulsing />
-          </div>
-
-          <motion.h1
-            className="text-6xl md:text-7xl font-black tracking-[0.2em] neon-text-cyan mb-4"
-            animate={{ textShadow: ["0 0 20px rgba(0,240,255,0.3)", "0 0 40px rgba(0,240,255,0.6)", "0 0 20px rgba(0,240,255,0.3)"] }}
+          <motion.div
+            className="flex justify-center mb-6"
+            animate={{ filter: ["drop-shadow(0 0 14px rgba(0,240,255,0.22))", "drop-shadow(0 0 26px rgba(0,240,255,0.42))", "drop-shadow(0 0 14px rgba(0,240,255,0.22))"] }}
             transition={{ duration: 3, repeat: Infinity }}
           >
-            SUZIE AI
-          </motion.h1>
+            <SuzieLogo className="w-[min(74vw,390px)]" />
+          </motion.div>
 
           <p className="text-lg text-gray-400 mb-2 tracking-wide">
             Your Global Intelligence Command Center

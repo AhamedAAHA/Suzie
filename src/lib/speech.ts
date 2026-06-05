@@ -1,7 +1,6 @@
 export async function speakGreeting(text: string): Promise<void> {
   if (typeof window === "undefined") return;
 
-  // Try AIML TTS first
   try {
     const res = await fetch("/api/tts", {
       method: "POST",
@@ -13,14 +12,27 @@ export async function speakGreeting(text: string): Promise<void> {
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
-      await audio.play();
-      audio.onended = () => URL.revokeObjectURL(url);
+      await new Promise<void>((resolve, reject) => {
+        audio.onended = () => {
+          URL.revokeObjectURL(url);
+          resolve();
+        };
+        audio.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error("Audio playback failed"));
+        };
+        audio.play().catch(reject);
+      });
       return;
     }
   } catch {
     // fall through to browser TTS
   }
 
+  speakBrowser(text);
+}
+
+function speakBrowser(text: string): void {
   if (!window.speechSynthesis) return;
 
   window.speechSynthesis.cancel();

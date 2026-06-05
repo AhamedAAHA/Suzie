@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
-import { useSuzieStore } from "@/store/suzieStore";
+import { hydrateOnlineState, useSuzieStore } from "@/store/suzieStore";
 import LiveAlerts from "@/components/LiveAlerts";
 import RiskPanel from "@/components/RiskPanel";
 import TerminalLogs from "@/components/TerminalLogs";
@@ -11,7 +11,7 @@ import VoiceCommand from "@/components/VoiceCommand";
 import SuzieOrb from "@/components/SuzieOrb";
 import CrisisDNA from "@/components/CrisisDNA";
 import PredictionTimeline from "@/components/PredictionTimeline";
-import { generateBriefing, answerVoiceQuery, generatePrediction } from "@/services/aimlService";
+import { generatePrediction } from "@/services/aimlService";
 import { generateCrisisDNA } from "@/services/crisisDetector";
 import { filterEventsByCategory } from "@/services/newsScanner";
 import { speakGreeting } from "@/lib/speech";
@@ -32,7 +32,15 @@ export default function DashboardPage() {
 
   const [response, setResponse] = useState("");
 
+  const [ready, setReady] = useState(false);
+
   useEffect(() => {
+    hydrateOnlineState();
+    setReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
     if (!isOnline) {
       router.push("/boot");
       return;
@@ -50,30 +58,44 @@ export default function DashboardPage() {
           if (data.events[0]) selectEvent(data.events[0]);
           addLog(`Live scan complete — ${data.events.length} events, risk ${data.riskScores.overall}/100`);
         } else {
-          const briefing = await generateBriefing(events, userMemory.name);
-          setBriefing(briefing);
           addLog("Using cached data — live scan unavailable");
         }
       } catch {
-        const briefing = await generateBriefing(events, userMemory.name);
-        setBriefing(briefing);
         addLog("Offline mode — using cached intelligence data");
       }
     }
 
     loadLiveData();
-  }, [isOnline, userMemory.name, setBriefing, addLog, router, events, selectEvent]);
+  }, [ready, isOnline, setBriefing, addLog, router, selectEvent]);
 
   const handleVoice = useCallback(async (query: string) => {
-    const answer = await answerVoiceQuery(query, events);
-    setResponse(answer);
-    speakGreeting(answer);
-    addLog(`SUZIE: ${answer.slice(0, 80)}...`);
+    try {
+      const res = await fetch("/api/voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      const data = res.ok ? await res.json() : null;
+      const answer = data?.response ?? `Processing: "${query}"`;
+      setResponse(answer);
+      speakGreeting(answer);
+      addLog(`SUZIE: ${answer.slice(0, 80)}...`);
+    } catch {
+      addLog("Voice query failed");
+    }
 
     if (query.toLowerCase().includes("construction")) router.push("/construction");
     if (query.toLowerCase().includes("report")) router.push("/reports");
     if (query.toLowerCase().includes("simulator") || query.toLowerCase().includes("what if")) router.push("/simulator");
-  }, [events, addLog, router]);
+  }, [addLog, router]);
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center grid-bg">
+        <p className="text-cyan-400 font-mono text-sm animate-pulse">INITIALIZING COMMAND CENTER...</p>
+      </div>
+    );
+  }
 
   const filtered = filterEventsByCategory(events, activeFilter);
   const dna = selectedEvent ? generateCrisisDNA(selectedEvent) : null;

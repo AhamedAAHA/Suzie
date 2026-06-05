@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { Globe, Zap, HardHat, FileText, Settings, LayoutDashboard } from "lucide-react";
-import SuzieOrb from "./SuzieOrb";
+import SuzieLogo from "./SuzieLogo";
 import WorldPulse from "./WorldPulse";
 import { useSuzieStore } from "@/store/suzieStore";
 
@@ -27,10 +27,11 @@ export default function NavBar() {
     <nav className="fixed top-0 left-0 right-0 z-40 glass-panel border-b border-cyan-400/10 px-4 py-2">
       <div className="flex items-center justify-between max-w-[1800px] mx-auto">
         <Link href="/dashboard" className="flex items-center gap-3">
-          <SuzieOrb size={32} active={isOnline} />
-          <div>
-            <span className="text-sm font-bold neon-text-cyan tracking-widest">SUZIE AI</span>
-            <p className="text-[9px] text-gray-500 tracking-wider">GLOBAL INTELLIGENCE</p>
+          <SuzieLogo className="w-28 sm:w-32" />
+          <div className="hidden sm:block">
+            <span className="text-[9px] text-gray-500 tracking-wider">
+              {isOnline ? "GLOBAL INTELLIGENCE ONLINE" : "GLOBAL INTELLIGENCE"}
+            </span>
           </div>
         </Link>
 

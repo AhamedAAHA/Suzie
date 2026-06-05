@@ -160,6 +160,7 @@ export default function SettingsPage() {
             "BRIGHT_DATA_SERP_ZONE",
             "NEWS_API_KEY",
             "OPENWEATHER_API_KEY",
+            "SPEECHMATICS_API_KEY",
             "NEXT_PUBLIC_SUPABASE_URL",
             "NEXT_PUBLIC_SUPABASE_ANON_KEY",
           ].map((key) => (
