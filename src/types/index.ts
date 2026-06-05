@@ -96,6 +96,50 @@ export interface IntelligenceReport {
   briefing: string;
 }
 
+export interface AnalysisSource {
+  label: string;
+  detail: string;
+}
+
+export interface IntelAnalysis {
+  query: string;
+  title: string;
+  focusCountry: string;
+  generatedAt: string;
+  summary: string;
+  impact: string[];
+  riskScore: number;
+  riskLabel: string;
+  riskScores: RiskScores;
+  dna: CrisisDNA | null;
+  prediction: PredictionTimeline;
+  recommendations: string[];
+  sources: AnalysisSource[];
+  relatedEvents: {
+    id: string;
+    title: string;
+    country: string;
+    riskLevel: RiskLevel;
+  }[];
+  construction: {
+    overallRisk: number;
+    materials: {
+      name: string;
+      unit: string;
+      currentPrice: number;
+      changePercent: number;
+      riskLevel: RiskLevel;
+      delayDays: number;
+    }[];
+    boq: {
+      projectName: string;
+      overrunPercent: number;
+      delayProbability: number;
+      projectedOverrun: number;
+    };
+  };
+}
+
 export interface ShippingRoute {
   id: string;
   from: { lat: number; lng: number; name: string };
@@ -107,9 +151,70 @@ export interface ShippingRoute {
 export interface UserMemory {
   name: string;
   country: string;
+  profession?: string;
   interests: string[];
+  frequentlyMonitoredTopics?: string[];
   briefingStyle: "short" | "detailed";
   lastSession: string;
+}
+
+export interface SessionRecord {
+  id: string;
+  at: string;
+  query: string;
+  module: "memory" | "foresight" | "briefing" | "scenario" | "dna" | "reports" | "general";
+  focusCountry?: string;
+  focusRisk?: string;
+  generatedReport?: boolean;
+}
+
+export interface BehavioralMemory {
+  topicsViewed: Record<string, number>;
+  countriesMonitored: Record<string, number>;
+  risksChecked: Record<string, number>;
+  reportsGenerated: number;
+  sessionsByDay: Record<string, number>;
+  sessionsByHour: Record<string, number>;
+  lastSeenAt?: string;
+}
+
+export interface IntelligenceMemory {
+  profile: UserMemory;
+  behavior: BehavioralMemory;
+  timeline: SessionRecord[];
+}
+
+export interface ForesightSignal {
+  name: string;
+  probability: number;
+  confidence: number;
+  direction: "up" | "down" | "stable";
+  explanation: string;
+  timeline: {
+    hours24: number;
+    days7: number;
+    days30: number;
+    days90: number;
+    months6: number;
+  };
+}
+
+export interface ScenarioVariant {
+  id: string;
+  title: string;
+  riskLevel: RiskLevel;
+  summary: string;
+  impacts: string[];
+}
+
+export interface ExecutiveBriefing {
+  mode: "30s" | "60s" | "full";
+  headline: string;
+  bullets: string[];
+  worldRiskScore: number;
+  constructionImpactLevel: "Low" | "Moderate" | "High" | "Critical";
+  recommendedAction: string;
+  spokenText: string;
 }
 
 export interface SuzieState {

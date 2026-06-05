@@ -1,6 +1,34 @@
 import { create } from "zustand";
 import { mockGlobalEvents, mockRiskScores } from "@/data/mockGlobalEvents";
-import { GlobalEvent, IntelligenceReport, RiskScores, UserMemory } from "@/types";
+import {
+  ExecutiveBriefing,
+  ForesightSignal,
+  GlobalEvent,
+  IntelligenceMemory,
+  IntelAnalysis,
+  IntelligenceReport,
+  RiskScores,
+  ScenarioVariant,
+  SessionRecord,
+  UserMemory,
+} from "@/types";
+import {
+  buildReturningBrief,
+  loadIntelligenceMemory,
+  saveIntelligenceMemory,
+  trackSession,
+} from "@/services/memoryEngine";
+
+export type AnalysisStage = "idle" | "detected" | "scanning" | "analyzing" | "ready";
+export type AICoreState = "idle" | "listening" | "thinking" | "analyzing" | "warning" | "success";
+export type ModuleView =
+  | "command"
+  | "memory"
+  | "foresight"
+  | "briefing-room"
+  | "scenario-lab"
+  | "dna-analyzer"
+  | "reports-center";
 
 interface SuzieStore {
   isOnline: boolean;
@@ -16,6 +44,18 @@ interface SuzieStore {
   reports: IntelligenceReport[];
   userMemory: UserMemory;
   activeFilter: string;
+  commandHistory: string[];
+  currentModule: ModuleView;
+  aiCoreState: AICoreState;
+
+  analysis: IntelAnalysis | null;
+  analysisOpen: boolean;
+  analysisStage: AnalysisStage;
+  foresightSignals: ForesightSignal[];
+  scenarios: ScenarioVariant[];
+  executiveBriefing: ExecutiveBriefing | null;
+  intelligenceMemory: IntelligenceMemory;
+  returningBriefing: string;
 
   setOnline: (v: boolean) => void;
   setBooting: (v: boolean) => void;
@@ -30,6 +70,17 @@ interface SuzieStore {
   addReport: (report: IntelligenceReport) => void;
   setActiveFilter: (filter: string) => void;
   updateMemory: (partial: Partial<UserMemory>) => void;
+  addCommand: (cmd: string) => void;
+  setAnalysisStage: (stage: AnalysisStage) => void;
+  setAnalysis: (analysis: IntelAnalysis | null) => void;
+  openAnalysis: () => void;
+  closeAnalysis: () => void;
+  setCurrentModule: (module: ModuleView) => void;
+  setAICoreState: (state: AICoreState) => void;
+  setForesight: (signals: ForesightSignal[], scenarios: ScenarioVariant[]) => void;
+  setExecutiveBriefing: (briefing: ExecutiveBriefing | null) => void;
+  hydrateMemory: () => void;
+  trackIntelligenceSession: (record: SessionRecord) => void;
   wakeUp: () => void;
 }
 
@@ -66,6 +117,29 @@ export const useSuzieStore = create<SuzieStore>((set, get) => ({
   reports: [],
   userMemory: defaultMemory,
   activeFilter: "all",
+  commandHistory: [],
+  currentModule: "command",
+  aiCoreState: "idle",
+
+  analysis: null,
+  analysisOpen: false,
+  analysisStage: "idle",
+  foresightSignals: [],
+  scenarios: [],
+  executiveBriefing: null,
+  intelligenceMemory: {
+    profile: defaultMemory,
+    behavior: {
+      topicsViewed: {},
+      countriesMonitored: {},
+      risksChecked: {},
+      reportsGenerated: 0,
+      sessionsByDay: {},
+      sessionsByHour: {},
+    },
+    timeline: [],
+  },
+  returningBriefing: "",
 
   setOnline: (v) => {
     persistOnline(v);
@@ -90,6 +164,34 @@ export const useSuzieStore = create<SuzieStore>((set, get) => ({
   setActiveFilter: (filter) => set({ activeFilter: filter }),
   updateMemory: (partial) =>
     set((s) => ({ userMemory: { ...s.userMemory, ...partial } })),
+  addCommand: (cmd) =>
+    set((s) => ({ commandHistory: [...s.commandHistory.slice(-30), cmd] })),
+  setAnalysisStage: (stage) => set({ analysisStage: stage }),
+  setAnalysis: (analysis) => set({ analysis }),
+  openAnalysis: () => set({ analysisOpen: true }),
+  closeAnalysis: () => set({ analysisOpen: false, analysisStage: "idle" }),
+  setCurrentModule: (module) => set({ currentModule: module }),
+  setAICoreState: (state) => set({ aiCoreState: state }),
+  setForesight: (signals, scenarios) => set({ foresightSignals: signals, scenarios }),
+  setExecutiveBriefing: (briefing) => set({ executiveBriefing: briefing }),
+  hydrateMemory: () => {
+    const mem = loadIntelligenceMemory();
+    set({
+      intelligenceMemory: mem,
+      userMemory: mem.profile,
+      returningBriefing: buildReturningBrief(mem),
+    });
+  },
+  trackIntelligenceSession: (record) => {
+    const { intelligenceMemory } = get();
+    const next = trackSession(intelligenceMemory, record);
+    saveIntelligenceMemory(next);
+    set({
+      intelligenceMemory: next,
+      userMemory: next.profile,
+      returningBriefing: buildReturningBrief(next),
+    });
+  },
   wakeUp: () => {
     const { addLog } = get();
     set({ isBooting: true, isListening: false });
