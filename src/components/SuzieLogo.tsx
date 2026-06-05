@@ -7,10 +7,10 @@ interface SuzieLogoProps {
 export default function SuzieLogo({ className = "" }: SuzieLogoProps) {
   return (
     <Image
-      src="/logo-suzie.svg"
+      src="/logo-suzie.png"
       alt="Suzie AI"
-      width={660}
-      height={650}
+      width={1536}
+      height={1024}
       className={`block h-auto select-none ${className}`}
       draggable={false}
       priority

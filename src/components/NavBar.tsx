@@ -26,7 +26,7 @@ export default function NavBar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-40 glass-panel border-b border-cyan-400/10 px-4 py-2">
       <div className="flex items-center justify-between max-w-[1800px] mx-auto">
-        <Link href="/dashboard" className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-3">
           <SuzieLogo className="w-28 sm:w-32" />
           <div className="hidden sm:block">
             <span className="text-[9px] text-gray-500 tracking-wider">
