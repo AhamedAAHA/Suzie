@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { hydrateOnlineState, useSuzieStore } from "@/store/suzieStore";
@@ -31,8 +31,9 @@ export default function DashboardPage() {
   } = useSuzieStore();
 
   const [response, setResponse] = useState("");
-
   const [ready, setReady] = useState(false);
+  const voiceBusyRef = useRef(false);
+  const lastVoiceRef = useRef<{ query: string; at: number } | null>(null);
 
   useEffect(() => {
     hydrateOnlineState();
@@ -69,6 +70,19 @@ export default function DashboardPage() {
   }, [ready, isOnline, setBriefing, addLog, router, selectEvent]);
 
   const handleVoice = useCallback(async (query: string) => {
+    const normalized = query.trim().toLowerCase().replace(/\s+/g, " ");
+    const now = Date.now();
+    if (
+      voiceBusyRef.current ||
+      (lastVoiceRef.current &&
+        lastVoiceRef.current.query === normalized &&
+        now - lastVoiceRef.current.at < 5000)
+    ) {
+      return;
+    }
+    voiceBusyRef.current = true;
+    lastVoiceRef.current = { query: normalized, at: now };
+
     try {
       const res = await fetch("/api/voice", {
         method: "POST",
@@ -78,10 +92,12 @@ export default function DashboardPage() {
       const data = res.ok ? await res.json() : null;
       const answer = data?.response ?? `Processing: "${query}"`;
       setResponse(answer);
-      speakGreeting(answer);
+      await speakGreeting(answer);
       addLog(`SUZIE: ${answer.slice(0, 80)}...`);
     } catch {
       addLog("Voice query failed");
+    } finally {
+      voiceBusyRef.current = false;
     }
 
     if (query.toLowerCase().includes("construction")) router.push("/construction");
@@ -102,8 +118,8 @@ export default function DashboardPage() {
   const prediction = generatePrediction(selectedEvent?.title ?? "stable");
 
   return (
-    <div className="min-h-screen pt-14 pb-4 px-3 grid-bg">
-      <div className="max-w-[1800px] mx-auto h-[calc(100vh-4rem)] grid grid-cols-12 grid-rows-[1fr_auto] gap-3">
+    <div className="min-h-screen pt-24 pb-4 px-3 grid-bg">
+      <div className="max-w-[1800px] mx-auto h-[calc(100vh-7rem)] grid grid-cols-12 grid-rows-[1fr_auto] gap-3">
         {/* Left Panel */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -208,7 +224,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="w-80">
-            <VoiceCommand onCommand={handleVoice} />
+            <VoiceCommand autoStart onCommand={handleVoice} />
           </div>
 
           <div className="flex gap-2">
