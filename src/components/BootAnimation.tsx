@@ -109,6 +109,21 @@ export default function BootAnimation({ onComplete }: BootAnimationProps) {
                 onCommand={() => {}}
               />
 
+              <div className="flex items-center gap-4 w-full max-w-xs mx-auto">
+                <div className="flex-1 h-px bg-gray-700" />
+                <span className="text-[10px] text-gray-500 font-mono">OR</span>
+                <div className="flex-1 h-px bg-gray-700" />
+              </div>
+
+              <motion.button
+                onClick={() => handleWake("clap")}
+                className="px-6 py-2.5 rounded-lg border border-cyan-400/40 text-cyan-400 font-semibold text-sm tracking-wider hover:bg-cyan-400/10 transition-all"
+                whileHover={{ scale: 1.03, boxShadow: "0 0 20px rgba(0,240,255,0.2)" }}
+                whileTap={{ scale: 0.97 }}
+              >
+                LOGIN TO ACTIVATE
+              </motion.button>
+
               <p className="text-[10px] text-gray-600 font-mono">Allow microphone when prompted</p>
             </motion.div>
           )}
