@@ -27,6 +27,9 @@ export default function VoiceCommand({
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const shouldListenRef = useRef(false);
+  const speechPausedRef = useRef(false);
+  const lastCommandRef = useRef<{ text: string; at: number } | null>(null);
+  const wakeTriggeredRef = useRef(false);
   const addLog = useSuzieStore((s) => s.addLog);
   const onCommandRef = useRef(onCommand);
   const onWakeRef = useRef(onWake);
@@ -40,21 +43,37 @@ export default function VoiceCommand({
     (text: string, isFinal = true) => {
       const trimmed = text.trim();
       if (!trimmed) return;
+      if (speechPausedRef.current) return;
 
-      if (isFinal) {
+      if (onWakeRef.current && isWakePhrase(trimmed)) {
+        if (wakeTriggeredRef.current) return;
+        wakeTriggeredRef.current = true;
         setTranscript(trimmed);
-        addLog(`VOICE: "${trimmed}"`);
-      }
-
-      if (isWakePhrase(trimmed)) {
+        addLog(`VOICE WAKE: "${trimmed}"`);
+        shouldListenRef.current = false;
+        recognitionRef.current?.stop();
+        setIsListening(false);
         onWakeRef.current?.();
         onCommandRef.current?.(trimmed);
         return;
       }
 
-      if (isFinal) {
-        onCommandRef.current?.(trimmed);
+      if (!isFinal) return;
+
+      const normalized = trimmed.toLowerCase().replace(/\s+/g, " ");
+      const now = Date.now();
+      if (
+        lastCommandRef.current &&
+        lastCommandRef.current.text === normalized &&
+        now - lastCommandRef.current.at < 2500
+      ) {
+        return;
       }
+      lastCommandRef.current = { text: normalized, at: now };
+
+      setTranscript(trimmed);
+      addLog(`VOICE: "${trimmed}"`);
+      onCommandRef.current?.(trimmed);
     },
     [addLog]
   );
@@ -68,7 +87,7 @@ export default function VoiceCommand({
       recognition.start();
       setIsListening(true);
       setError(null);
-      addLog("Voice recognition active — say Hey Suzie");
+      addLog("Voice recognition active");
     } catch {
       // already started
       setIsListening(true);
@@ -102,8 +121,16 @@ export default function VoiceCommand({
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
-        const text = result[0]?.transcript ?? "";
-        processCommand(text, result.isFinal);
+        for (let alt = 0; alt < result.length; alt++) {
+          const text = result[alt]?.transcript ?? "";
+          if (onWakeRef.current && isWakePhrase(text)) {
+            processCommand(text, result.isFinal);
+            return;
+          }
+        }
+
+        const primaryText = result[0]?.transcript ?? "";
+        processCommand(primaryText, result.isFinal);
       }
     };
 
@@ -124,6 +151,7 @@ export default function VoiceCommand({
       setIsListening(false);
       if (shouldListenRef.current && enabled) {
         setTimeout(() => {
+          if (speechPausedRef.current) return;
           try {
             recognition.start();
             setIsListening(true);
@@ -150,6 +178,30 @@ export default function VoiceCommand({
       recognition.stop();
     };
   }, [enabled, autoStart, processCommand, startListening]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const pauseForSpeech = () => {
+      speechPausedRef.current = true;
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    };
+
+    const resumeAfterSpeech = () => {
+      speechPausedRef.current = false;
+      if (enabled && autoStart) {
+        setTimeout(() => startListening(), 350);
+      }
+    };
+
+    window.addEventListener("suzie:speech-start", pauseForSpeech);
+    window.addEventListener("suzie:speech-end", resumeAfterSpeech);
+    return () => {
+      window.removeEventListener("suzie:speech-start", pauseForSpeech);
+      window.removeEventListener("suzie:speech-end", resumeAfterSpeech);
+    };
+  }, [enabled, autoStart, startListening]);
 
   const toggle = () => {
     if (isListening) stopListening();
@@ -196,8 +248,8 @@ export default function VoiceCommand({
               processCommand(transcript, true);
             }
           }}
-          placeholder={isListening ? 'Listening... say "Hey Suzie"' : 'Say "Hey Suzie" or type a command...'}
-          className="w-full bg-transparent border border-gray-700/50 rounded-lg px-3 py-1.5 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-cyan-400/50 font-mono"
+          placeholder={isListening ? "Listening..." : "Type a command..."}
+          className="w-full bg-transparent border border-gray-700/50 rounded-lg px-3 py-1.5 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-cyan-400/50"
         />
         {error && <p className="text-[10px] text-red-400 mt-1">{error}</p>}
         {autoStart && isListening && !error && (

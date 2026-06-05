@@ -52,7 +52,7 @@ export function generateCrisisDNA(event: GlobalEvent): CrisisDNA {
     affectedSectors: event.categories.map((c) =>
       c.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
     ),
-    affectedCountries: [event.country, "Sri Lanka", "India", "Global"],
+    affectedCountries: [...new Set([event.country, "Sri Lanka", "India", "Global"])],
     spreadSpeed: spreadMap[event.riskLevel],
     riskScore:
       event.riskLevel === "critical" ? 92 :

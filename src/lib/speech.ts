@@ -1,6 +1,48 @@
+let currentAudio: HTMLAudioElement | null = null;
+let currentAudioUrl: string | null = null;
+let speechRunId = 0;
+
+function dispatchSpeechState(type: "start" | "end") {
+  window.dispatchEvent(new CustomEvent(`suzie:speech-${type}`));
+}
+
+function stopCurrentSpeech() {
+  window.speechSynthesis?.cancel();
+
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.src = "";
+    currentAudio = null;
+  }
+
+  if (currentAudioUrl) {
+    URL.revokeObjectURL(currentAudioUrl);
+    currentAudioUrl = null;
+  }
+}
+
 export async function speakGreeting(text: string): Promise<void> {
   if (typeof window === "undefined") return;
 
+  const runId = ++speechRunId;
+  stopCurrentSpeech();
+  dispatchSpeechState("start");
+
+  try {
+    const spokeWithServer = await speakServerAudio(text, runId);
+    if (!spokeWithServer && speechRunId === runId) {
+      await speakBrowser(text);
+    }
+  } finally {
+    if (speechRunId === runId) {
+      currentAudio = null;
+      currentAudioUrl = null;
+      dispatchSpeechState("end");
+    }
+  }
+}
+
+async function speakServerAudio(text: string, runId: number): Promise<boolean> {
   try {
     const res = await fetch("/api/tts", {
       method: "POST",
@@ -8,32 +50,40 @@ export async function speakGreeting(text: string): Promise<void> {
       body: JSON.stringify({ text }),
     });
 
-    if (res.ok) {
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      await new Promise<void>((resolve, reject) => {
-        audio.onended = () => {
-          URL.revokeObjectURL(url);
-          resolve();
-        };
-        audio.onerror = () => {
-          URL.revokeObjectURL(url);
-          reject(new Error("Audio playback failed"));
-        };
-        audio.play().catch(reject);
-      });
-      return;
-    }
-  } catch {
-    // fall through to browser TTS
-  }
+    if (!res.ok || speechRunId !== runId) return false;
 
-  speakBrowser(text);
+    const blob = await res.blob();
+    if (speechRunId !== runId) return true;
+
+    const url = URL.createObjectURL(blob);
+    currentAudioUrl = url;
+    const audio = new Audio(url);
+    currentAudio = audio;
+
+    await new Promise<void>((resolve, reject) => {
+      audio.onended = () => {
+        if (currentAudio === audio) currentAudio = null;
+        if (currentAudioUrl === url) currentAudioUrl = null;
+        URL.revokeObjectURL(url);
+        resolve();
+      };
+      audio.onerror = () => {
+        if (currentAudio === audio) currentAudio = null;
+        if (currentAudioUrl === url) currentAudioUrl = null;
+        URL.revokeObjectURL(url);
+        reject(new Error("Audio playback failed"));
+      };
+      audio.play().catch(reject);
+    });
+
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-function speakBrowser(text: string): void {
-  if (!window.speechSynthesis) return;
+function speakBrowser(text: string): Promise<void> {
+  if (!window.speechSynthesis) return Promise.resolve();
 
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
@@ -47,7 +97,11 @@ function speakBrowser(text: string): void {
   );
   if (preferred) utterance.voice = preferred;
 
-  window.speechSynthesis.speak(utterance);
+  return new Promise((resolve) => {
+    utterance.onend = () => resolve();
+    utterance.onerror = () => resolve();
+    window.speechSynthesis.speak(utterance);
+  });
 }
 
 export function speakAlert(text: string): void {
