@@ -16,6 +16,9 @@ const SPREAD_COLORS: Record<string, string> = {
 };
 
 export default function CrisisDNA({ dna }: CrisisDNAProps) {
+  const affectedSectors = [...new Set(dna.affectedSectors)];
+  const affectedCountries = [...new Set(dna.affectedCountries)];
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -49,8 +52,8 @@ export default function CrisisDNA({ dna }: CrisisDNAProps) {
       <div>
         <span className="text-[10px] text-gray-500 uppercase">Affected Sectors</span>
         <div className="flex flex-wrap gap-1 mt-1">
-          {dna.affectedSectors.map((s) => (
-            <span key={s} className="text-[10px] px-2 py-0.5 rounded bg-cyan-400/10 text-cyan-400 border border-cyan-400/20">
+          {affectedSectors.map((s, i) => (
+            <span key={`${s}-${i}`} className="text-[10px] px-2 py-0.5 rounded bg-cyan-400/10 text-cyan-400 border border-cyan-400/20">
               {s}
             </span>
           ))}
@@ -60,8 +63,8 @@ export default function CrisisDNA({ dna }: CrisisDNAProps) {
       <div>
         <span className="text-[10px] text-gray-500 uppercase">Affected Countries</span>
         <div className="flex flex-wrap gap-1 mt-1">
-          {dna.affectedCountries.map((c) => (
-            <span key={c} className="text-[10px] px-2 py-0.5 rounded bg-red-400/10 text-red-400 border border-red-400/20">
+          {affectedCountries.map((c, i) => (
+            <span key={`${c}-${i}`} className="text-[10px] px-2 py-0.5 rounded bg-red-400/10 text-red-400 border border-red-400/20">
               {c}
             </span>
           ))}

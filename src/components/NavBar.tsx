@@ -24,10 +24,10 @@ export default function NavBar() {
   if (pathname === "/" || pathname === "/boot") return null;
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-40 glass-panel border-b border-cyan-400/10 px-4 py-2">
-      <div className="flex items-center justify-between max-w-[1800px] mx-auto">
+    <nav className="fixed top-0 left-0 right-0 z-40 glass-panel border-b border-cyan-400/10 px-4 py-1">
+      <div className="flex h-20 items-center justify-between max-w-[1800px] mx-auto">
         <Link href="/" className="flex items-center gap-3">
-          <SuzieLogo className="w-28 sm:w-32" />
+          <SuzieLogo className="w-20 sm:w-24" />
           <div className="hidden sm:block">
             <span className="text-[9px] text-gray-500 tracking-wider">
               {isOnline ? "GLOBAL INTELLIGENCE ONLINE" : "GLOBAL INTELLIGENCE"}
@@ -41,7 +41,7 @@ export default function NavBar() {
             return (
               <Link key={href} href={href}>
                 <motion.div
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     active
                       ? "bg-cyan-400/10 text-cyan-400 border border-cyan-400/30"
                       : "text-gray-500 hover:text-gray-300"

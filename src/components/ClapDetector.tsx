@@ -18,6 +18,7 @@ export default function ClapDetector({ onClap, enabled = true }: ClapDetectorPro
   const triggeredRef = useRef(false);
   const animRef = useRef<number>(0);
   const prevEnergyRef = useRef(0);
+  const clapTimesRef = useRef<number[]>([]);
   const onClapRef = useRef(onClap);
 
   useEffect(() => {
@@ -44,18 +45,24 @@ export default function ClapDetector({ onClap, enabled = true }: ClapDetectorPro
     const spike = rms - prevEnergyRef.current;
     prevEnergyRef.current = rms * 0.85;
 
-    // Clap = sudden loud transient (peak + rapid energy jump)
+    // Clap = sudden loud transient. Normal speech is usually sustained, so avoid peak-only triggers.
     const isClap =
-      (peak > 45 && spike > 18) ||
-      (peak > 60) ||
-      (rms > 35 && spike > 25);
+      (peak > 72 && spike > 28 && rms > 18) ||
+      (peak > 88 && spike > 20 && rms > 14);
 
     if (isClap && !triggeredRef.current) {
-      triggeredRef.current = true;
-      onClapRef.current();
+      const now = Date.now();
+      clapTimesRef.current = [...clapTimesRef.current, now].filter((t) => now - t < 1200);
+
+      if (clapTimesRef.current.length >= 2) {
+        triggeredRef.current = true;
+        clapTimesRef.current = [];
+        onClapRef.current();
+      }
+
       setTimeout(() => {
         triggeredRef.current = false;
-      }, 2500);
+      }, 900);
     }
   }, []);
 
