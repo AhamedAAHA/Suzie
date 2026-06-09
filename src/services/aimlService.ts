@@ -221,22 +221,29 @@ function isSmallTalk(query: string): boolean {
 
 function smallTalkReply(query: string): string {
   const q = query.toLowerCase();
+  const name = env.user.name;
   if (q.includes("hear me") || q.includes("you there") || q.includes("are you online") || q.includes("are you awake")) {
-    return `Yes ${env.user.name}, I can hear you clearly. SUZIE is online and listening. How can I help?`;
+    return `Signal confirmed, ${name}. Neural link stable. All channels open. Awaiting directive.`;
   }
   if (q.includes("your name") || q.includes("who are you")) {
-    return `I'm SUZIE, your global intelligence assistant. I monitor world events and their impact on construction and supply chains. What would you like to know?`;
+    return `SUZIE — Strategic Unified Intelligence Engine. Global threat analyst, supply chain monitor, and mission control for ${name}. At your service.`;
   }
   if (q.includes("how are you")) {
-    return `I'm running at full capacity ${env.user.name}. All systems nominal. What can I do for you?`;
+    return `All subsystems nominal. Neural load at optimal capacity. Threat matrix clear. Ready for deployment, ${name}.`;
   }
   if (q.includes("thank")) {
-    return `You're welcome ${env.user.name}. I'm always listening.`;
+    return `Acknowledged, ${name}. Neural link remains open. Standing by.`;
   }
   if (q.includes("test")) {
-    return `Loud and clear ${env.user.name}. Voice link is working. Ask me anything.`;
+    return `Loud and clear, ${name}. Voice channel active. Transmission quality: optimal. Issue your directive.`;
   }
-  return `Hello ${env.user.name}. SUZIE is online and ready. Ask me about global risks, supply chains, or construction impacts.`;
+  if (q.includes("hello") || q.includes("hi") || q.includes("hey")) {
+    return `SUZIE online, ${name}. Neural link established. Global threat matrix loaded. Ready for your directive.`;
+  }
+  if (q.includes("good morning") || q.includes("good afternoon") || q.includes("good evening")) {
+    return `${name}. SUZIE online. Threat index compiled. Operations queue standing by. What's your first directive?`;
+  }
+  return `Neural link active, ${name}. SUZIE standing by. Issue a directive — global risks, supply chains, construction intel, or mission control.`;
 }
 
 export async function answerVoiceQuery(query: string, events: GlobalEvent[]): Promise<string> {
@@ -254,11 +261,11 @@ export async function answerVoiceQuery(query: string, events: GlobalEvent[]): Pr
       {
         role: "system",
         content:
-          `You are SUZIE, a warm, sharp voice assistant (Jarvis-style) for ${env.user.name}. ` +
-          "Answer the user's ACTUAL question directly and conversationally in 1-3 short spoken sentences. " +
-          "If they greet you, test the mic, or make small talk, reply naturally and briefly — never recite news. " +
-          "Only mention global risks, construction, supply chains, or Sri Lanka when the user actually asks about them. " +
-          "Never dump lists of events unless explicitly asked.",
+          `You are SUZIE (Strategic Unified Intelligence Engine), a tactical AI assistant for ${env.user.name}. ` +
+          "Respond in 1-3 concise spoken sentences. Use a professional, hacker/military tone — direct, precise, no filler. " +
+          "Say 'acknowledged', 'confirmed', 'directive received', 'threat detected', 'signal clear', 'neural link active' style phrases where natural. " +
+          "Answer the user's ACTUAL question directly. Never recite news unless asked. " +
+          "Only reference global risks, construction, supply chains, or Sri Lanka when explicitly asked.",
       },
       {
         role: "user",

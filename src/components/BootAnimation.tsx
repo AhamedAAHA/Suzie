@@ -7,7 +7,7 @@ import SuzieLogo from "./SuzieLogo";
 import ClapDetector from "./ClapDetector";
 import VoiceCommand from "./VoiceCommand";
 import { useSuzieStore } from "@/store/suzieStore";
-import { speakGreeting } from "@/lib/speech";
+import { primeSpeech, speakGreeting } from "@/lib/speech";
 
 interface BootAnimationProps {
   onComplete: () => void;
@@ -17,43 +17,72 @@ export default function BootAnimation({ onComplete }: BootAnimationProps) {
   const [phase, setPhase] = useState<"listen" | "booting" | "online">("listen");
   const micEnabled = true;
   const wakingRef = useRef(false);
-  const wakeUp = useSuzieStore((s) => s.wakeUp);
+  const spokenRef = useRef(false);
+  const completedRef = useRef(false);
+  const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const routeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addLog = useSuzieStore((s) => s.addLog);
   const userName = useSuzieStore((s) => s.userMemory.name);
   const setOnline = useSuzieStore((s) => s.setOnline);
+  const setBooting = useSuzieStore((s) => s.setBooting);
+  const setWakeState = useSuzieStore((s) => s.setWakeState);
 
   const handleWake = useCallback(
     (source: "clap" | "voice") => {
       if (wakingRef.current || phase !== "listen") return;
       wakingRef.current = true;
+      primeSpeech();
 
       setPhase("booting");
-      wakeUp();
-      addLog(source === "clap" ? "Clap detected - SUZIE awakening..." : "Voice wake detected - SUZIE awakening...");
+      setBooting(true);
+      setWakeState("thinking");
+      addLog(
+        source === "clap"
+          ? "[BOOT] Clap signature verified — initializing SUZIE."
+          : "[BOOT] Voice signature verified — initializing SUZIE."
+      );
 
-      setTimeout(() => {
-        setPhase("online");
-        setOnline(true);
-        const hour = new Date().getHours();
-        const greeting =
-          hour < 12
-            ? `Good morning ${userName}. SUZIE is online. I scanned global signals. Three major risks need your attention today. Shall I brief you?`
-            : hour < 17
-            ? `Good afternoon ${userName}. Global monitoring is active. Construction material risk is currently moderate.`
-            : `Welcome back ${userName}. Since your last session, six new global events were detected.`;
+      bootTimerRef.current = setTimeout(() => {
+        void (async () => {
+          if (completedRef.current) return;
+          setPhase("online");
+          setBooting(false);
+          setWakeState("online");
+          setOnline(true);
 
-        speakGreeting(greeting);
-        addLog("Voice greeting delivered");
+          const hour = new Date().getHours();
+          const greeting =
+            hour < 12
+              ? `Neural access granted, ${userName}. SUZIE is online. Threat matrix loaded.`
+              : hour < 17
+              ? `Neural access granted, ${userName}. Global monitoring is active.`
+              : `Neural access granted, ${userName}. SUZIE is online. Operations channel open.`;
 
-        setTimeout(onComplete, 2000);
+          if (!spokenRef.current) {
+            spokenRef.current = true;
+            await Promise.race([
+              speakGreeting(greeting),
+              new Promise<void>((resolve) => setTimeout(resolve, 5000)),
+            ]);
+            addLog("Voice greeting delivered");
+          }
+
+          completedRef.current = true;
+          routeTimerRef.current = setTimeout(onComplete, 500);
+        })();
       }, 2500);
     },
-    [phase, wakeUp, addLog, userName, setOnline, onComplete]
+    [phase, addLog, userName, setOnline, setBooting, setWakeState, onComplete]
   );
 
   useEffect(() => {
     addLog("Boot sequence initiated - listening for clap and voice");
-  }, [addLog]);
+    return () => {
+      if (bootTimerRef.current) clearTimeout(bootTimerRef.current);
+      if (routeTimerRef.current) clearTimeout(routeTimerRef.current);
+      setBooting(false);
+    };
+  }, [addLog, setBooting]);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#030712] grid-bg">

@@ -3,8 +3,17 @@ import { synthesizeSpeechmatics } from "@/services/speechmaticsService";
 import { synthesizeSpeech as synthesizeAiml } from "@/services/aimlService";
 
 export async function POST(req: NextRequest) {
-  const { text } = await req.json();
-  if (!text) return NextResponse.json({ error: "text required" }, { status: 400 });
+  let text: string;
+  try {
+    const body = await req.json();
+    text = body?.text;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+  if (!text || typeof text !== "string" || !text.trim()) {
+    return NextResponse.json({ error: "text required" }, { status: 400 });
+  }
+  text = text.trim();
 
   // Prefer Speechmatics (natural voice for SUZIE)
   const speechmaticsAudio = await synthesizeSpeechmatics(text);

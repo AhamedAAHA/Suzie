@@ -12,15 +12,24 @@ import {
   SessionRecord,
   UserMemory,
 } from "@/types";
+import { Task } from "@/types/task";
 import {
   buildReturningBrief,
   loadIntelligenceMemory,
   saveIntelligenceMemory,
   trackSession,
 } from "@/services/memoryEngine";
+import {
+  getTasks as loadStoredTasks,
+  addTask as persistAddTask,
+  updateTask as persistUpdateTask,
+  deleteTask as persistDeleteTask,
+  completeTask as persistCompleteTask,
+} from "@/services/taskService";
 
 export type AnalysisStage = "idle" | "detected" | "scanning" | "analyzing" | "ready";
 export type AICoreState = "idle" | "listening" | "thinking" | "analyzing" | "warning" | "success";
+export type WakeState = "idle" | "listening" | "online" | "thinking" | "speaking";
 export type ModuleView =
   | "command"
   | "memory"
@@ -28,7 +37,8 @@ export type ModuleView =
   | "briefing-room"
   | "scenario-lab"
   | "dna-analyzer"
-  | "reports-center";
+  | "reports-center"
+  | "mission";
 
 interface SuzieStore {
   isOnline: boolean;
@@ -47,6 +57,7 @@ interface SuzieStore {
   commandHistory: string[];
   currentModule: ModuleView;
   aiCoreState: AICoreState;
+  wakeState: WakeState;
 
   analysis: IntelAnalysis | null;
   analysisOpen: boolean;
@@ -56,6 +67,14 @@ interface SuzieStore {
   executiveBriefing: ExecutiveBriefing | null;
   intelligenceMemory: IntelligenceMemory;
   returningBriefing: string;
+
+  // Task / Mission Queue state
+  tasks: Task[];
+  taskAnalysisOpen: boolean;
+  dailyBriefingOpen: boolean;
+  tomorrowPlanOpen: boolean;
+  addTaskModalOpen: boolean;
+  editingTask: Task | null;
 
   setOnline: (v: boolean) => void;
   setBooting: (v: boolean) => void;
@@ -77,11 +96,24 @@ interface SuzieStore {
   closeAnalysis: () => void;
   setCurrentModule: (module: ModuleView) => void;
   setAICoreState: (state: AICoreState) => void;
+  setWakeState: (state: WakeState) => void;
   setForesight: (signals: ForesightSignal[], scenarios: ScenarioVariant[]) => void;
   setExecutiveBriefing: (briefing: ExecutiveBriefing | null) => void;
   hydrateMemory: () => void;
   trackIntelligenceSession: (record: SessionRecord) => void;
   wakeUp: () => void;
+
+  // Task actions
+  hydrateTasks: () => void;
+  addTaskItem: (task: Omit<Task, "id" | "createdAt" | "updatedAt">) => Task;
+  updateTaskItem: (id: string, updates: Partial<Task>) => void;
+  removeTaskItem: (id: string) => void;
+  completeTaskItem: (id: string) => void;
+  setTaskAnalysisOpen: (v: boolean) => void;
+  setDailyBriefingOpen: (v: boolean) => void;
+  setTomorrowPlanOpen: (v: boolean) => void;
+  setAddTaskModalOpen: (v: boolean) => void;
+  setEditingTask: (task: Task | null) => void;
 }
 
 const defaultMemory: UserMemory = {
@@ -120,6 +152,7 @@ export const useSuzieStore = create<SuzieStore>((set, get) => ({
   commandHistory: [],
   currentModule: "command",
   aiCoreState: "idle",
+  wakeState: "idle",
 
   analysis: null,
   analysisOpen: false,
@@ -141,6 +174,14 @@ export const useSuzieStore = create<SuzieStore>((set, get) => ({
   },
   returningBriefing: "",
 
+  // Task state
+  tasks: [],
+  taskAnalysisOpen: false,
+  dailyBriefingOpen: false,
+  tomorrowPlanOpen: false,
+  addTaskModalOpen: false,
+  editingTask: null,
+
   setOnline: (v) => {
     persistOnline(v);
     set({ isOnline: v });
@@ -156,7 +197,7 @@ export const useSuzieStore = create<SuzieStore>((set, get) => ({
   addLog: (msg) =>
     set((s) => ({
       logs: [
-        ...s.logs.slice(-50),
+        ...s.logs.slice(-99),
         `[${new Date().toLocaleTimeString()}] ${msg}`,
       ],
     })),
@@ -172,6 +213,7 @@ export const useSuzieStore = create<SuzieStore>((set, get) => ({
   closeAnalysis: () => set({ analysisOpen: false, analysisStage: "idle" }),
   setCurrentModule: (module) => set({ currentModule: module }),
   setAICoreState: (state) => set({ aiCoreState: state }),
+  setWakeState: (state) => set({ wakeState: state }),
   setForesight: (signals, scenarios) => set({ foresightSignals: signals, scenarios }),
   setExecutiveBriefing: (briefing) => set({ executiveBriefing: briefing }),
   hydrateMemory: () => {
@@ -198,8 +240,48 @@ export const useSuzieStore = create<SuzieStore>((set, get) => ({
     addLog("Wake signal detected — initializing SUZIE...");
     setTimeout(() => {
       persistOnline(true);
-      set({ isBooting: false, isOnline: true });
+      set({ isBooting: false, isOnline: true, wakeState: "online" });
       addLog("SUZIE ONLINE — All systems nominal");
     }, 2500);
   },
+
+  // Task actions
+  hydrateTasks: () => {
+    const tasks = loadStoredTasks();
+    set({ tasks });
+  },
+  addTaskItem: (task) => {
+    const newTask = persistAddTask(task);
+    set((s) => ({ tasks: [...s.tasks, newTask] }));
+    return newTask;
+  },
+  updateTaskItem: (id, updates) => {
+    persistUpdateTask(id, updates);
+    set((s) => ({
+      tasks: s.tasks.map((t) =>
+        t.id === id
+          ? { ...t, ...updates, updatedAt: new Date().toISOString() }
+          : t
+      ),
+    }));
+  },
+  removeTaskItem: (id) => {
+    persistDeleteTask(id);
+    set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+  },
+  completeTaskItem: (id) => {
+    persistCompleteTask(id);
+    set((s) => ({
+      tasks: s.tasks.map((t) =>
+        t.id === id
+          ? { ...t, status: "completed" as const, updatedAt: new Date().toISOString() }
+          : t
+      ),
+    }));
+  },
+  setTaskAnalysisOpen: (v) => set({ taskAnalysisOpen: v }),
+  setDailyBriefingOpen: (v) => set({ dailyBriefingOpen: v }),
+  setTomorrowPlanOpen: (v) => set({ tomorrowPlanOpen: v }),
+  setAddTaskModalOpen: (v) => set({ addTaskModalOpen: v }),
+  setEditingTask: (task) => set({ editingTask: task }),
 }));
